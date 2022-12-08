@@ -1,3 +1,6 @@
+# Much of this code is inspired by the sustainBench package
+# online available at: https://github.com/sustainlab-group/sustainbench
+
 library(haven)
 library(gtools)
 library(reshape2)
