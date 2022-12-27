@@ -34,7 +34,7 @@ et2_geos = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2013/Pub_ETH_Househo
 et3_geos = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2015/Geovariables/ETH_HouseholdGeovars_y3.dta")
 
 #...............................................................................
-##### Drop households #####
+##### Drop Migrant households #####
 #...............................................................................
 
 et1_geos <- et1_geos %>% 
@@ -233,7 +233,7 @@ et <- rbind(et1,et2,et3) %>%
   mutate(clusterid = paste0(country,"_",ea_id2)) %>% 
   select(-ea_id2) %>% 
   relocate(country,year,clusterid,rural,lat,lon) %>% 
-  mutate(rural = ifelse(rural > 1,0,1)) # check other countries if difference between small and large town.
+  mutate(rural = ifelse(rural > 1,0,1)) # check other countries if difference between small and large town. not available
 
 write.csv(et,"../../Data/processed/eth_labels.csv")
 
