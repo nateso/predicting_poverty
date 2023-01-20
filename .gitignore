@@ -1,5 +1,0 @@
-.gitignore
-.DS_Store
-labels_preprocessing/.ipynb_checkpoints/
-labels_preprocessing/.Rhistory
-labels_preprocessing/create_recode_files.R
