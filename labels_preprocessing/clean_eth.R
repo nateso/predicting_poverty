@@ -1,4 +1,4 @@
-# Much of this code is inspired by the sustainBench package
+# Some of this code is inspired by the sustainBench package
 # online available at: https://github.com/sustainlab-group/sustainbench
 
 library(haven)
@@ -25,6 +25,7 @@ et2_house = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2013/sect9_hh_w2.dt
 et2_ass = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2013/sect10_hh_w2.dta")
 et2_cons = read_dta('../../Data/lsms/Ethiopia/first_ESS/ETH_2013/cons_agg_w2.dta')
 
+et3_a <- read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2015/Household/sect_cover_hh_w3.dta")
 et3_house = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2015/Household/sect9_hh_w3.dta")
 et3_ass = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2015/Household/sect10_hh_w3.dta")
 et3_cons = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2015/cons_agg_w3.dta")
@@ -33,111 +34,126 @@ et1_geos = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2011/pub_eth_househo
 et2_geos = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2013/Pub_ETH_HouseholdGeovars_Y2.dta")
 et3_geos = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2015/Geovariables/ETH_HouseholdGeovars_y3.dta")
 
-#...............................................................................
+#*******************************************************************************
 ##### ID variables #####
-#...............................................................................
-
+#*******************************************************************************
 # In Ethiopia, the sample was extended to urban households in wave 2. Thus,
 # the main id variable comes from wave 2
 
-hh_ids_full <- et1_house %>% 
-  select(household_id) %>%
-  mutate(case_id = paste0("w1_",household_id)) %>% 
-  left_join(et2_house %>% select(household_id, household_id2), by = 'household_id') %>% 
-  mutate(household_id2 = ifelse(household_id2 == "",NA,household_id2))
+# use the geovariables to identify whether a household moved outside the EA
+et1_geos %<>% select(household_id, ea_id, LAT_DD_MOD, LON_DD_MOD) %>% 
+  rename(lat_1 = LAT_DD_MOD, lon_1 = LON_DD_MOD)
 
-hh_ids_sub <- et2_house %>%
+et2_geos %<>% select(household_id, household_id2, ea_id, ea_id2, lat_dd_mod, lon_dd_mod) %>% 
+  rename(lat_2 = lat_dd_mod, lon_2 = lon_dd_mod)
+
+et3_geos %<>% select(household_id2, ea_id2, lat_dd_mod, lon_dd_mod) %>% 
+  rename(lat_3 = lat_dd_mod, lon_3 = lon_dd_mod) %>% 
+  left_join(et3_house %>% select(household_id, household_id2, ea_id), by = 'household_id2')
+
+# the EA variables
+long_panel_eas <- et1_house %>% 
+  select(ea_id) %>% distinct() %>% 
+  left_join(et2_house %>% filter(household_id != "") %>% select(ea_id, ea_id2) %>% distinct(), by = 'ea_id') %>% 
+  left_join(et1_geos %>% select(ea_id, lat_1, lon_1) %>% distinct(), by = 'ea_id')
+
+short_panel_eas <- et2_house %>%
+  select(ea_id2) %>% distinct() %>% filter((ea_id2 %in% long_panel_eas$ea_id2) == F) %>% 
+  left_join(et2_geos %>% select(ea_id2, lat_2, lon_2) %>% filter(is.na(lat_2) == F) %>% distinct(), by = 'ea_id2')
+
+
+# long panel # this removes all split-off households
+w1_ids <- et1_house %>% 
+  select(household_id, ea_id) %>% 
+  left_join(et1_cons %>% select(household_id, total_cons_ann), by = 'household_id') %>% 
+  filter(is.na(total_cons_ann) == F) %>% # ensure that consumption data is available
+  select(-total_cons_ann) 
+
+w2_ids <- et2_house %>% 
+  select(household_id, household_id2, ea_id, ea_id2) %>% 
+  filter(household_id %in% w1_ids$household_id) %>% 
+  left_join(long_panel_eas %>% select(ea_id, lat_1, lon_1), by = 'ea_id') %>% 
+  left_join(et2_geos %>% select(household_id2, lat_2, lon_2), by = 'household_id2') %>% 
+  mutate(dist_y1y2 = distHaversine(cbind(lon_2,lat_2),cbind(lon_1,lat_1))) %>% 
+  mutate(dist_y1y2 = ifelse(is.na(dist_y1y2),0,dist_y1y2)) %>% # assume that if no GPS data, household did not move (only one case)
+  filter(dist_y1y2 < 1) %>% # remove households that outside of EA
+  select(-dist_y1y2, -lat_2, -lon_2) %>% 
+  left_join(et2_cons %>% select(household_id2, total_cons_ann), by = 'household_id2') %>% 
+  filter(is.na(total_cons_ann) == F) %>% 
+  select(-total_cons_ann)
+  
+w3_ids <- et3_house %>% 
+  select(household_id, household_id2, ea_id, ea_id2) %>% 
+  filter(household_id2 %in% w2_ids$household_id2) %>% 
+  left_join(long_panel_eas %>% select(ea_id, lat_1, lon_1), by = 'ea_id') %>% 
+  left_join(et3_geos %>% select(household_id2, lat_3, lon_3), by = 'household_id2') %>% 
+  mutate(dist_y1y3 = distHaversine(cbind(lon_3,lat_3),cbind(lon_1,lat_1))) %>% 
+  filter(dist_y1y3 < 1) %>% # remove households that outside of EA
+  select(-dist_y1y3, -lat_3, -lon_3) %>% 
+  left_join(et3_cons %>% select(household_id2, total_cons_ann), by = 'household_id2') %>% 
+  filter(is.na(total_cons_ann) == F) %>% 
+  select(-total_cons_ann)
+  
+
+# urban household (aka short panel only starting wave 2)
+# this removes split-off households and households that dropped out of the sample
+uw2_ids <- et2_house %>%
   filter(household_id == '') %>% 
-  select(household_id,household_id2) %>% 
-  mutate(case_id = paste0('w2_',household_id2),
-         household_id = NA)
+  select(household_id2, ea_id2) %>% 
+  left_join(et2_cons %>% select(household_id2, total_cons_ann), by = 'household_id2') %>% 
+  filter(is.na(total_cons_ann) == F) %>% 
+  select(-total_cons_ann)
 
-all_hh_ids <- rbind.data.frame(hh_ids_full,hh_ids_sub)
+uw3_ids <- et3_house %>%
+  filter(household_id2 %in% uw2_ids$household_id2) %>% 
+  select(household_id2, ea_id2) %>% 
+  left_join(short_panel_eas %>% select(ea_id2, lat_2, lon_2), by = 'ea_id2') %>% 
+  left_join(et3_geos %>% select(household_id2, lat_3, lon_3), by = 'household_id2') %>% 
+  mutate(dist_y2y3 = distHaversine(cbind(lon_3,lat_3),cbind(lon_2,lat_2))) %>% 
+  filter(dist_y2y3 < 1) %>% # remove households that outside of EA
+  select(-dist_y2y3, -lat_3, -lon_3) %>% 
+  left_join(et3_cons %>% select(household_id2, total_cons_ann), by = 'household_id2') %>% 
+  filter(is.na(total_cons_ann) == F) %>% 
+  select(-total_cons_ann)
+  
+# short_panel_ids
+short_panel_ids <- uw3_ids %>%
+  rename(lat = lat_2, lon = lon_2)
 
-# get the ids, which are subject to attrition
-attr_w1w2w3 <- hh_ids_full %>% 
-  filter((household_id %in% et3_house$household_id) == F |
-           (household_id %in% et2_house$household_id) == F)
-
-attr_w2w3 <- hh_ids_sub %>% 
-  filter((household_id2 %in% et3_house$household_id2) == F)
-
-attr_ids <- rbind.data.frame(attr_w1w2w3, attr_w2w3)
-
-# get the main ids (either present in all 3 waves or only in 2 and 3)
-# because of the additional EAs in wave 2
-main_ids <- all_hh_ids %>% 
-  filter((case_id %in% attr_ids$case_id) == F)
-
-
-# get data that links every household to one ea inlcuding the geo vars
-ea1_geos <- et1_geos %>% 
-  select(ea_id, LAT_DD_MOD, LON_DD_MOD) %>% 
-  rename(lat = LAT_DD_MOD, lon = LON_DD_MOD) %>% 
-  mutate(cluster_id = paste0('w1_',ea_id)) %>% 
-  select(cluster_id, lat, lon) %>% 
-  distinct()
-
-ea2_geos <- et2_geos %>% 
-  filter(ea_id == "") %>% 
-  rename(lat = lat_dd_mod, lon = lon_dd_mod) %>% 
-  mutate(cluster_id = paste0('w2_',ea_id2)) %>% 
-  select(cluster_id, lat, lon) %>% 
-  distinct() %>% 
-  drop_na()
-
-ea3_geos <- et3_geos %>% 
-  filter(ea_id2 %in% c("010501020100105","130101010100303")) %>% # for these two eas, geo vars become only available in wave 3 
-  mutate(cluster_id = paste0('w2_',ea_id2)) %>% 
-  select(cluster_id, lat_dd_mod, lon_dd_mod) %>% 
-  rename(lat = lat_dd_mod, lon = lon_dd_mod) %>% 
-  distinct()
-
-ea_geos <- rbind(ea1_geos, ea2_geos, ea3_geos)
-
-hh_ea_ids <- all_hh_ids %>% 
-  left_join(et1_house %>% select(household_id, ea_id), by = 'household_id') %>% 
-  left_join(et2_house %>% select(household_id2, ea_id2), by = 'household_id2') %>% 
-  mutate(cluster_id = ifelse(is.na(ea_id), "", paste0('w1_',ea_id))) %>% 
-  mutate(cluster_id = ifelse(cluster_id == "", paste0('w2_',ea_id2), cluster_id)) %>% 
-  select(case_id, cluster_id) %>% 
-  left_join(ea_geos, by = 'cluster_id')
+long_panel_ids <- w3_ids %>% 
+  rename(lat = lat_1, lon = lon_1)
 
 
-#...............................................................................
+# In Ethiopia, the households get new lats and lons if they moved more than 10 km
+# I use this information to exclude households that moved outside the ea. (i.e. if they have new coordinates)
+#*******************************************************************************
 ##### Housing characteristics #####
-#...............................................................................
+#*******************************************************************************
 
 et1_house = et1_house %>%
-  left_join(all_hh_ids %>% select(household_id, case_id), by = 'household_id') %>% 
-  select(case_id, hh_s9q04, hh_s9q05, hh_s9q06, hh_s9q07, 
+  select(household_id, hh_s9q04, hh_s9q05, hh_s9q06, hh_s9q07, 
          hh_s9q10, hh_s9q13, hh_s9q19, hh_s9q21) %>%
   rename(rooms=hh_s9q04, wall = hh_s9q05, roof = hh_s9q06, floor=hh_s9q07, 
          toilet=hh_s9q10, watsup=hh_s9q13, electric=hh_s9q19, cooking_fuel = hh_s9q21) %>%
   mutate(electric=ifelse(electric<=4, 1, 0))
 
 et2_house = et2_house %>%
-  left_join(all_hh_ids %>% select(household_id2, case_id), by = 'household_id2') %>% 
-  select(case_id, hh_s9q04, hh_s9q05, hh_s9q06, hh_s9q07, 
+  select(household_id2, hh_s9q04, hh_s9q05, hh_s9q06, hh_s9q07, 
          hh_s9q10, hh_s9q13, hh_s9q19_a, hh_s9q21) %>%
   rename(rooms=hh_s9q04, wall = hh_s9q05, roof = hh_s9q06, floor=hh_s9q07, 
          toilet=hh_s9q10, watsup=hh_s9q13, electric=hh_s9q19_a, cooking_fuel = hh_s9q21) %>%
   mutate(electric=ifelse(electric<=4, 1, 0)) 
 
 et3_house = et3_house %>%
-  left_join(all_hh_ids %>% select(household_id2, case_id), by = 'household_id2') %>% 
-  left_join(all_hh_ids %>% select(household_id, case_id), by = 'household_id', suffix = c("","_w1")) %>%
-  mutate(case_id = ifelse(is.na(case_id), case_id_w1, case_id)) %>% 
-  filter(is.na(case_id) == F) %>% # some households only appear in wave 3 (just remove them...)
-  select(case_id, hh_s9q04, hh_s9q05, hh_s9q06, hh_s9q07, 
+  select(household_id2, hh_s9q04, hh_s9q05, hh_s9q06, hh_s9q07, 
          hh_s9q10, hh_s9q13, hh_s9q19_a, hh_s9q21) %>%
   rename(rooms=hh_s9q04, wall = hh_s9q05, roof = hh_s9q06, floor=hh_s9q07, 
          toilet=hh_s9q10, watsup=hh_s9q13, electric=hh_s9q19_a, cooking_fuel = hh_s9q21) %>%
   mutate(electric=ifelse(electric<=4, 1, 0)) 
 
-#...............................................................................
+#*******************************************************************************
 ###### Recode Housing ######
-#...............................................................................
+#*******************************************************************************
 floor = read.csv("../../Data/lsms/Ethiopia/recode/floor_recode.csv")
 wall = read.csv("../../Data/lsms/Ethiopia/recode/wall_recode.csv")
 roof = read.csv("../../Data/lsms/Ethiopia/recode/roof_recode.csv")
@@ -177,16 +193,16 @@ et3_house %<>%
   left_join(watsup,by = c('watsup' = 'watsup_code')) %>% 
   select(-floor, -wall, -roof, -cooking_fuel, -toilet, -watsup)
 
-#...............................................................................
+rm(floor, wall, roof, cooking_fuel, toilet, watsup)
+#*******************************************************************************
 ##### Assets #####
-#...............................................................................
+#*******************************************************************************
 
 et1_ass %<>% 
-  left_join(all_hh_ids %>% select(household_id, case_id), by = 'household_id') %>% 
   filter(hh_s10q0a %in% c("Fixed line telephone", "Mobile Telephone",
                           "Radio", "Television", "Bicycle", "Motorcycle",
                           "Refrigerator", "Private car")) %>%
-  select(case_id, hh_s10q0a, hh_s10q01) %>% 
+  select(household_id, hh_s10q0a, hh_s10q01) %>% 
   mutate(hh_s10q01 = ifelse(hh_s10q01 > 0,1,0)) %>% 
   pivot_wider(names_from = hh_s10q0a, values_from = hh_s10q01) %>% 
   mutate(phone = ifelse(`Fixed line telephone` + `Mobile Telephone` > 0,1,0)) %>%
@@ -195,39 +211,34 @@ et1_ass %<>%
           motorcycle = Motorcycle, fridge=Refrigerator, car=`Private car`)
 
 et2_ass %<>% 
-  left_join(all_hh_ids %>% select(household_id2, case_id), by = 'household_id2') %>% 
   filter(hh_s10q0a %in% c("Fixed line telephone", "Mobile Telephone",
                           "Radio/tape recorder", "Television", "Bicycle", "Motorcycle",
                           "Refrigerator", "Private car")) %>%
-  select(case_id, hh_s10q0a, hh_s10q01) %>%
+  select(household_id2, hh_s10q0a, hh_s10q01) %>%
   pivot_wider(names_from = hh_s10q0a, values_from = hh_s10q01) %>%
   mutate(phone = `Fixed line telephone` + `Mobile Telephone`) %>%
   select(-`Fixed line telephone`,-`Mobile Telephone`) %>% 
-  mutate_at(vars(-("case_id")),
+  mutate_at(vars(-("household_id2")),
             function(x) {ifelse(x>=1, 1, 0)}) %>%
   rename(radio=`Radio/tape recorder`, tv=Television, bike = Bicycle,
          motorcycle = Motorcycle, fridge=Refrigerator, car=`Private car`)
 
 et3_ass %<>% 
-  left_join(all_hh_ids %>% select(household_id2, case_id), by = 'household_id2') %>% 
-  left_join(all_hh_ids %>% select(household_id, case_id), by = 'household_id', suffix = c("","_w1")) %>%
-  mutate(case_id = ifelse(is.na(case_id), case_id_w1, case_id)) %>% 
-  filter(is.na(case_id) == F) %>% # some households only appear in wave 3 (just remove them...)
   filter(hh_s10q0a %in% c("Fixed line telephone", "Mobile Telephone",
                           "Radio/tape recorder", "Television", "Bicycle", "Motorcycle",
                           "Refrigerator", "Private car")) %>%
-  select(case_id, hh_s10q0a, hh_s10q01) %>%
+  select(household_id2, hh_s10q0a, hh_s10q01) %>%
   pivot_wider(names_from = hh_s10q0a, values_from = hh_s10q01) %>%
   mutate(phone = `Fixed line telephone` + `Mobile Telephone`) %>%
   select(-`Fixed line telephone`,-`Mobile Telephone`) %>% 
-  mutate_at(vars(-("case_id")),
+  mutate_at(vars(-("household_id2")),
             function(x) {ifelse(x>=1, 1, 0)}) %>%
   rename(radio=`Radio/tape recorder`, tv=Television, bike = Bicycle,
          motorcycle = Motorcycle, fridge=Refrigerator, car=`Private car`)
 
-#...............................................................................
+##*******************************************************************************
 ##### Consumption #####
-#...............................................................................
+##*******************************************************************************
 
 et_cpi <- read.csv("../../Data/lsms/Ethiopia/eth_cpi.csv") %>% 
   filter(Country.Code == "ETH") %>% 
@@ -242,95 +253,123 @@ et_cpi %<>%
   select(year, deflator_2017)
 
 et1_cons %<>% 
-  left_join(all_hh_ids %>% select(household_id, case_id), by = 'household_id') %>% 
-  filter(is.na(total_cons_ann) == F) %>% # remove those households that did not report any consumption data
-  select(case_id, hh_size, adulteq, price_index_hce, total_cons_ann) %>% 
+  select(household_id, rural, hh_size, adulteq, price_index_hce, total_cons_ann) %>%
   mutate(totcons_pc_adj = total_cons_ann/hh_size * price_index_hce) %>% 
   mutate(year = 2011, country = 'eth') %>% 
   left_join(et_cpi, by = 'year') %>% 
-  mutate(cons_pc_lcu_2017 = totcons_pc_adj * deflator_2017) %>% 
-  mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326*365)) %>% 
-  select(country, year, case_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  mutate(cons_pc_lcu_2017 = (totcons_pc_adj * deflator_2017)/365) %>% 
+  mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326)) %>% 
+  select(country, year, rural,household_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
 et2_cons %<>% 
-  left_join(all_hh_ids %>% select(household_id2, case_id), by = 'household_id2') %>% 
-  filter(is.na(total_cons_ann) == F) %>% # remove those households that did not report any consumption data
-  select(case_id, hh_size, adulteq, price_index_hce, total_cons_ann) %>% 
+  select(household_id2, rural,hh_size, adulteq, price_index_hce, total_cons_ann) %>% 
+  mutate(rural = ifelse(rural > 1,0,1)) %>% 
   mutate(totcons_pc_adj = total_cons_ann/hh_size * price_index_hce) %>% 
   mutate(year = 2013, country = 'eth') %>% 
   left_join(et_cpi, by = 'year') %>% 
-  mutate(cons_pc_lcu_2017 = totcons_pc_adj * deflator_2017) %>% 
-  mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326*365)) %>% 
-  select(country, year, case_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  mutate(cons_pc_lcu_2017 = (totcons_pc_adj * deflator_2017)/365) %>% 
+  mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326)) %>% 
+  select(country, year, rural,household_id2, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
 et3_cons %<>% 
-  left_join(all_hh_ids %>% select(household_id2, case_id), by = 'household_id2') %>% 
-  left_join(all_hh_ids %>% select(household_id, case_id), by = 'household_id', suffix = c("","_w1")) %>%
-  mutate(case_id = ifelse(is.na(case_id), case_id_w1, case_id)) %>% 
-  filter(is.na(case_id) == F) %>% # some households only appear in wave 3 (just remove them...)
-  filter(is.na(total_cons_ann) == F) %>% # remove those households that did not report any consumption data
-  select(case_id, hh_size, adulteq, price_index_hce, total_cons_ann) %>% 
+  select(household_id2, rural, hh_size, adulteq, price_index_hce, total_cons_ann) %>% 
+  mutate(rural = ifelse(rural > 1,0,1)) %>% 
   mutate(totcons_pc_adj = total_cons_ann/hh_size * price_index_hce) %>% 
   mutate(year = 2015, country = 'eth') %>% 
   left_join(et_cpi, by = 'year') %>% 
-  mutate(cons_pc_lcu_2017 = totcons_pc_adj * deflator_2017) %>% 
-  mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326*365)) %>% 
-  select(country, year, case_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  mutate(cons_pc_lcu_2017 = (totcons_pc_adj * deflator_2017)/365) %>% 
+  mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326)) %>% 
+  select(country, year, rural,household_id2, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
-#...............................................................................
-##### Combine data and add geovariables #####
-#...............................................................................
+#*******************************************************************************
+#### merge data ####
+#*******************************************************************************
+et1 <- et1_house %>% 
+  left_join(et1_ass, by = 'household_id') %>% 
+  left_join(et1_cons, by = 'household_id') %>% 
+  mutate(wave = 1)
 
-et1 <- et1_cons %>% 
-  left_join(et1_house, by = 'case_id') %>%
-  left_join(et1_ass, by = 'case_id') %>% 
-  mutate(wave = 1) %>% 
-  mutate(across(everything(), as.vector))
+et2 <- et2_house %>% 
+  left_join(et2_ass, by = 'household_id2') %>% 
+  left_join(et2_cons, by = 'household_id2') %>% 
+  mutate(wave = 2)
 
-et2 <- et2_cons %>% 
-  left_join(et2_house, by = 'case_id') %>%
-  left_join(et2_ass, by = 'case_id') %>% 
-  mutate(wave = 2) %>% 
-  mutate(across(everything(), as.vector))
+et3 <- et3_house %>% 
+  left_join(et3_ass, by = 'household_id2') %>% 
+  left_join(et3_cons, by = 'household_id2') %>% 
+  mutate(wave = 3)
 
-et3 <- et3_cons %>% 
-  left_join(et3_house, by = 'case_id') %>%
-  left_join(et3_ass, by = 'case_id') %>% 
-  mutate(wave = 3) %>% 
-  mutate(across(everything(), as.vector))
+#*******************************************************************************
+#### split data ####
+#*******************************************************************************
+et1_eas = read_dta("../../Data/lsms/Ethiopia/first_ESS/ETH_2011/sect9_hh_w1.dta") %>% 
+  select(household_id, ea_id)
 
-et_attr <- rbind(et1,et2,et3) %>% 
-  filter(case_id %in% attr_ids$case_id) %>%
-  mutate(unique_id = paste(country,wave,case_id,sep = '_')) %>% 
-  left_join(hh_ea_ids, by = 'case_id') %>% 
-  relocate(country, year, wave, cluster_id, unique_id, case_id, lat, lon) %>% 
-  filter(is.na(lat) == F) # remove the two clusters without 
+long_panel <- rbind.data.frame(
+  et1 %>% filter(household_id %in% long_panel_ids$household_id) %>% 
+    left_join(long_panel_ids %>% select(household_id, household_id2), by = 'household_id') %>% 
+    select(-household_id),
+  et2 %>% filter(household_id2 %in% long_panel_ids$household_id2), 
+  et3 %>% filter(household_id2 %in% long_panel_ids$household_id2)
+)
 
-et <- rbind(et1,et2,et3) %>% 
-  filter((case_id %in% attr_ids$case_id) == F) %>%
-  mutate(unique_id = paste(country,wave,case_id,sep = '_')) %>% 
-  left_join(hh_ea_ids, by = 'case_id') %>% 
-  relocate(country, year, wave, cluster_id, unique_id, case_id, lat, lon) 
+long_panel %<>% left_join(long_panel_ids, by = 'household_id2') 
 
-# some households were removed due to missing values in either wave. Remove them from the other waves too.
-in_w3 <- et %>% filter(wave == 3) %>% select(case_id)
-in_w2 <- et %>% filter(wave == 2) %>% select(case_id)
-et %<>% filter(case_id %in% in_w3$case_id) %>% filter(case_id %in% in_w2$case_id)
+long_panel_attr <- et1 %>%
+  filter((household_id %in% long_panel$household_id) == F) %>%
+  left_join(et1_eas, by = 'household_id') %>% 
+  left_join(long_panel_eas, by = 'ea_id')
 
-occur = et %>% group_by(case_id) %>% count()
-table(et$wave)
-table(occur$n) # numbers do match! -sweet! -finally!
+short_panel <- rbind.data.frame(
+  et2 %>% filter(household_id2 %in% short_panel_ids$household_id2), 
+  et3 %>% filter(household_id2 %in% short_panel_ids$household_id2)
+)
+
+short_panel_attr <- et2 %>% 
+  left_join(et2_geos %>% select(household_id2,ea_id2), by = 'household_id2') %>% 
+  filter(ea_id2 %in% short_panel_ids$ea_id2) %>% 
+  filter((household_id2 %in% short_panel$household_id2) == F)
+
+#*******************************************************************************
+#### final rearrange ####
+#*******************************************************************************
+long_panel %<>%
+  mutate(case_id = paste0('eth_', household_id2),
+         cluster_id = paste0('eth_', ea_id2)) %>% 
+  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  select(-household_id2, -household_id, -ea_id, -ea_id2) %>% 
+  mutate_all(as.vector)
+
+long_panel_attr %<>% 
+  mutate(case_id = paste0('eth_', household_id),
+         cluster_id = paste0('eth_', ea_id)) %>% 
+  rename(lat = lat_1, lon = lon_1) %>% 
+  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  select(-household_id, -ea_id, -ea_id2) %>% 
+  mutate_all(as.vector)
+
+short_panel %<>% 
+  left_join(short_panel_ids, by = 'household_id2') %>% 
+  mutate(case_id = paste0('eth_', household_id2),
+         cluster_id = paste0('eth_', ea_id2)) %>% 
+  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  select(-household_id2, -ea_id2) %>% 
+  mutate_all(as.vector)
+
+short_panel_attr %<>%
+  left_join(short_panel_eas, by = 'ea_id2') %>% 
+  mutate(case_id = paste0('eth_', household_id2),
+         cluster_id = paste0('eth_', ea_id2)) %>%
+  rename(lat = lat_2, lon = lon_2) %>% 
+  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  select(-household_id2, -ea_id2) %>% 
+  mutate_all(as.vector)
 
 
-#...............................................................................
-##### save dataset #####
-#...............................................................................
-
-write.csv(et,"../../Data/processed/eth_labels.csv")
-write.csv(et_attr, "../../Data/processed/eth_labels_attr.csv")
-
-
-
-
-
-
+#*******************************************************************************
+#### save data ####
+#*******************************************************************************
+write.csv(long_panel,"../../Data/processed/eth_labels_long.csv", row.names = F)
+write.csv(long_panel_attr,"../../Data/processed/eth_labels_long_attr.csv", row.names = F)
+write.csv(short_panel,"../../Data/processed/eth_labels_short.csv", row.names = F)
+write.csv(short_panel_attr,"../../Data/processed/eth_labels_short_attr.csv", row.names = F)
