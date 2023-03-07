@@ -259,7 +259,7 @@ et1_cons %<>%
   left_join(et_cpi, by = 'year') %>% 
   mutate(cons_pc_lcu_2017 = (totcons_pc_adj * deflator_2017)/365) %>% 
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326)) %>% 
-  select(country, year, rural,household_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  select(country, rural,household_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
 et2_cons %<>% 
   select(household_id2, rural,hh_size, adulteq, price_index_hce, total_cons_ann) %>% 
@@ -269,7 +269,7 @@ et2_cons %<>%
   left_join(et_cpi, by = 'year') %>% 
   mutate(cons_pc_lcu_2017 = (totcons_pc_adj * deflator_2017)/365) %>% 
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326)) %>% 
-  select(country, year, rural,household_id2, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  select(country, rural,household_id2, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
 et3_cons %<>% 
   select(household_id2, rural, hh_size, adulteq, price_index_hce, total_cons_ann) %>% 
@@ -279,7 +279,7 @@ et3_cons %<>%
   left_join(et_cpi, by = 'year') %>% 
   mutate(cons_pc_lcu_2017 = (totcons_pc_adj * deflator_2017)/365) %>% 
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (8.49641704559326)) %>% 
-  select(country, year, rural,household_id2, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  select(country, rural,household_id2, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
 #*******************************************************************************
 #### merge data ####
@@ -287,17 +287,29 @@ et3_cons %<>%
 et1 <- et1_house %>% 
   left_join(et1_ass, by = 'household_id') %>% 
   left_join(et1_cons, by = 'household_id') %>% 
-  mutate(wave = 1)
+  mutate(wave = 1) %>% 
+  mutate(start_month = 09,
+         start_year = 2011,
+         end_month = 03,
+         end_year = 2012)
 
 et2 <- et2_house %>% 
   left_join(et2_ass, by = 'household_id2') %>% 
   left_join(et2_cons, by = 'household_id2') %>% 
-  mutate(wave = 2)
+  mutate(wave = 2) %>% 
+  mutate(start_month = 09,
+         start_year = 2013,
+         end_month = 04,
+         end_year = 2014)
 
 et3 <- et3_house %>% 
   left_join(et3_ass, by = 'household_id2') %>% 
   left_join(et3_cons, by = 'household_id2') %>% 
-  mutate(wave = 3)
+  mutate(wave = 3) %>% 
+  mutate(start_month = 09,
+         start_year = 2015,
+         end_month = 04,
+         end_year = 2016)
 
 #*******************************************************************************
 #### split data ####
@@ -336,7 +348,7 @@ short_panel_attr <- et2 %>%
 long_panel %<>%
   mutate(case_id = paste0('eth_', household_id2),
          cluster_id = paste0('eth_', ea_id2)) %>% 
-  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  relocate(country, start_month, start_year, end_month, end_year, wave, cluster_id, rural, lat, lon, case_id) %>% 
   select(-household_id2, -household_id, -ea_id, -ea_id2) %>% 
   mutate_all(as.vector)
 
@@ -344,7 +356,7 @@ long_panel_attr %<>%
   mutate(case_id = paste0('eth_', household_id),
          cluster_id = paste0('eth_', ea_id)) %>% 
   rename(lat = lat_1, lon = lon_1) %>% 
-  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  relocate(country, start_month, start_year, end_month, end_year, wave, cluster_id, rural, lat, lon, case_id) %>% 
   select(-household_id, -ea_id, -ea_id2) %>% 
   mutate_all(as.vector)
 
@@ -352,7 +364,7 @@ short_panel %<>%
   left_join(short_panel_ids, by = 'household_id2') %>% 
   mutate(case_id = paste0('eth_', household_id2),
          cluster_id = paste0('eth_', ea_id2)) %>% 
-  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  relocate(country, start_month, start_year, end_month, end_year, wave, cluster_id, rural, lat, lon, case_id) %>% 
   select(-household_id2, -ea_id2) %>% 
   mutate_all(as.vector)
 
@@ -361,7 +373,7 @@ short_panel_attr %<>%
   mutate(case_id = paste0('eth_', household_id2),
          cluster_id = paste0('eth_', ea_id2)) %>%
   rename(lat = lat_2, lon = lon_2) %>% 
-  relocate(country, year, wave, cluster_id, rural, lat, lon, case_id) %>% 
+  relocate(country, start_month, start_year, end_month, end_year, wave, cluster_id, rural, lat, lon, case_id) %>% 
   select(-household_id2, -ea_id2) %>% 
   mutate_all(as.vector)
 

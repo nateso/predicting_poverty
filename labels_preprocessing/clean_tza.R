@@ -363,10 +363,10 @@ long_panel_attr <- tz1 %>%
 #*******************************************************************************
 #### save data ####
 #*******************************************************************************
-write.csv(short_panel,"../../Data/processed/tza_labels_short.csv")
-write.csv(short_panel_attr,"../../Data/processed/tza_labels_short_attr.csv")
-write.csv(long_panel, '../../Data/processed/tza_labels_long.csv')
-write.csv(long_panel_attr, "../../Data/processed/tza_labels_long_attr.csv")
+write.csv(short_panel,"../../Data/processed/tza_labels_short.csv", row.names = F)
+write.csv(short_panel_attr,"../../Data/processed/tza_labels_short_attr.csv", row.names = F)
+write.csv(long_panel, '../../Data/processed/tza_labels_long.csv', row.names = F)
+write.csv(long_panel_attr, "../../Data/processed/tza_labels_long_attr.csv", row.names = F)
 
 
 

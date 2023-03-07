@@ -452,10 +452,10 @@ long_panel_attr <- hhid_comm %>%
 #...............................................................................
 ##### save data #####
 #...............................................................................
-write.csv(short_panel,"../../Data/processed/uga_short_labels.csv")
-write.csv(short_panel_attr,"../../Data/processed/uga_short_labels_attr.csv")
-write.csv(long_panel,"../../Data/processed/uga_long_labels.csv")
-write.csv(long_panel_attr,"../../Data/processed/uga_long_labels_attr.csv")
+write.csv(short_panel,"../../Data/processed/uga_short_labels.csv", row.names = F)
+write.csv(short_panel_attr,"../../Data/processed/uga_short_labels_attr.csv", row.names = F)
+write.csv(long_panel,"../../Data/processed/uga_long_labels.csv", row.names = F)
+write.csv(long_panel_attr,"../../Data/processed/uga_long_labels_attr.csv", row.names = F)
 
 
 
