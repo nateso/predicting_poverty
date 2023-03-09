@@ -72,7 +72,6 @@ ng4_geos %<>%
 
 
 #### panel eas
-
 ea_geos <- ng1_geos %>% 
   select(cluster_id, lat_1, lon_1) %>% 
   distinct()
@@ -98,7 +97,7 @@ w1_ids <- ng1_geos %>%
   select(case_id, cluster_id)
 
 w2_ids <- ng2_geos %>% 
-  filter(case_id %in% w1_ids$case_id) #%>% # filter households that were not part of the first wave (e.g. due to missing consumption data)
+  filter(case_id %in% w1_ids$case_id) %>% # filter households that were not part of the first wave (e.g. due to missing consumption data)
   # the case_id also changes because it includes the ea, which is zero in case the household moved away...
   left_join(ng2_cons_1 %>% select(hhid, totcons), by = 'hhid') %>% 
   left_join(ng2_cons_2 %>% select(hhid, totcons), by = 'hhid', suffix = c("_1","_2")) %>% 
@@ -137,16 +136,13 @@ w4_ids <- ng4_geos %>%
   select(case_id, cluster_id)
 
 ## short panel ids
-long_panel_ids <- w4_ids
+long_panel_ids <- w4_ids %>% 
+  filter(case_id %in% w1_ids$case_id) %>% 
+  filter(case_id %in% w2_ids$case_id) %>% 
+  filter(case_id %in% w3_ids$case_id)
 
-short_panel_ids <- w3_ids %>% 
+short_panel_ids <- w3_ids %>%
   filter(cluster_id %in% short_panel_eas$cluster_id)
-
-### no idea where the different clusters are disappearing to.... let's see tomorrow...
-
-
-
-
 #...............................................................................
 ##### Housing characteristics #####
 #...............................................................................
@@ -379,25 +375,38 @@ ng4_cons <- ng4_cons %>%
 ##### Merge Data per wave #####
 #...............................................................................
 
-ng1 <- ng1_house %>%
-  mutate(country = 'nga',wave = 1, year = 2010) %>% 
+ng1 <- ng1_geos %>% 
+  select(case_id) %>% 
+  left_join(ng1_house, by = 'case_id') %>% 
   left_join(ng1_ass, by = 'case_id') %>% 
-  left_join(ng1_cons, by = 'case_id')
+  left_join(ng1_cons, by = 'case_id') %>% 
+  mutate(country = 'nga',wave = 1) %>% 
+  mutate(start_year = 2010, start_month = 08, end_year = 2011, end_month = 04)
 
-ng2 <- ng2_house %>% 
-  mutate(country = 'nga',wave = 2, year = 2012) %>% 
+ng2 <- ng2_geos %>% 
+  select(case_id) %>% 
+  left_join(ng2_house, by = 'case_id') %>% 
   left_join(ng2_ass, by = 'case_id') %>% 
-  left_join(ng2_cons, by = 'case_id')
+  left_join(ng2_cons, by = 'case_id') %>% 
+  mutate(country = 'nga', wave = 2) %>% 
+  mutate(start_year = 2012, start_month = 09, end_year = 2013, end_month = 04) 
 
-ng3 <- ng3_house %>% 
-  mutate(country = 'nga',wave = 3, year = 2015) %>% 
+ng3 <- ng3_geos %>% 
+  select(case_id) %>% 
+  left_join(ng3_house, by = 'case_id') %>% 
   left_join(ng3_ass, by = 'case_id') %>% 
-  left_join(ng3_cons, by = 'case_id')
-
-ng4 <- ng4_house %>% 
-  mutate(country = 'nga',wave = 4, year = 2018) %>% 
+  left_join(ng3_cons, by = 'case_id') %>% 
+  mutate(country = 'nga',wave = 3) %>% 
+  mutate(start_year = 2015, start_month = 09, end_year = 2016, end_month = 04)
+  
+ng4 <- ng4_geos %>% 
+  select(case_id) %>% 
+  left_join(ng4_house, by = 'case_id') %>% 
   left_join(ng4_ass, by = 'case_id') %>% 
-  left_join(ng4_cons, by = 'case_id') 
+  left_join(ng4_cons, by = 'case_id') %>% 
+  mutate(country = 'nga',wave = 4) %>% 
+  mutate(start_year = 2018, start_month = 07, end_year = 2019, end_month = 02)
+
 
 #...............................................................................
 ##### Split data removing migrant households #####
@@ -419,13 +428,15 @@ long_panel <- rbind.data.frame(
 long_panel %<>% 
   left_join(long_panel_ids, by = 'case_id') %>% 
   left_join(ea_geos, by = 'cluster_id') %>% 
-  mutate(case_id = paste0('eth_', case_id),
-         cluster_id = paste0('eth_', cluster_id)) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
   rename(lat = lat_1, lon = lon_1) %>% 
-  select(country,year,wave,cluster_id,rural,lat,lon,case_id,
-         rooms,electric,floor_qual,wall_qual,roof_qual,cooking_fuel_qual,
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
          toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
-         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017)
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
+  mutate_all(as.vector)
 
 
 short_panel <- rbind.data.frame(
@@ -437,102 +448,51 @@ short_panel <- rbind.data.frame(
 short_panel %<>% 
   left_join(short_panel_ids, by = 'case_id') %>% 
   left_join(ea_geos, by = 'cluster_id') %>% 
-  mutate(case_id = paste0('eth_', case_id),
-         cluster_id = paste0('eth_', cluster_id))
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
   rename(lat = lat_1, lon = lon_1) %>% 
-  select(country,year,wave,cluster_id,rural,lat,lon,case_id,
-         rooms,electric,floor_qual,wall_qual,roof_qual,cooking_fuel_qual,
-         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
-         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017)
-
+  select(country,start_year, start_month, end_year, end_month, wave,
+           cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+           roof_qual,cooking_fuel_qual,
+           toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+           hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
+  mutate_all(as.vector)
 
 short_panel_attr <- ng1 %>% 
   left_join(ng1_geos %>% select(case_id, cluster_id), by = 'case_id') %>% 
   left_join(ea_geos, by = 'cluster_id') %>% 
-  filter(cluster_id %in% short_panel_ids$cluster_id) %>% 
-  mutate(case_id = paste0('eth_', case_id),
-         cluster_id = paste0('eth_', cluster_id)) %>% 
+  filter(cluster_id %in% short_panel_eas$cluster_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
   filter((case_id %in% short_panel$case_id) == F) %>% 
   rename(lat = lat_1, lon = lon_1) %>% 
-  select(country,year,wave,cluster_id,rural,lat,lon,case_id,
-         rooms,electric,floor_qual,wall_qual,roof_qual,cooking_fuel_qual,
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
          toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
-         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017)
-
-
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
+  mutate_all(as.vector)
 
 long_panel_attr <- ng1 %>% 
   left_join(ng1_geos %>% select(case_id, cluster_id), by = 'case_id') %>% 
   left_join(ea_geos, by = 'cluster_id') %>% 
-  filter(cluster_id %in% long_panel_ids$cluster_id) %>% 
-  mutate(case_id = paste0('eth_', case_id),
-         cluster_id = paste0('eth_', cluster_id)) %>% 
+  filter(cluster_id %in% long_panel_eas$cluster_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
   filter((case_id %in% long_panel$case_id) == F) %>% 
   rename(lat = lat_1, lon = lon_1) %>% 
-  select(country,year,wave,cluster_id,rural,lat,lon,case_id,
-         rooms,electric,floor_qual,wall_qual,roof_qual,cooking_fuel_qual,
-         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
-         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017)
-
-
-
-
-
-
-
-ng1_attr <- ng1 %>% 
-  filter((case_id %in% main_ids) == F)
-
-ng2_attr <- ng2 %>% 
-  filter((case_id %in% main_ids) == F) %>% 
-  relocate(names(ng1_attr))
-
-ng3_attr <- ng3 %>% 
-  filter((case_id %in% main_ids) == F) %>% 
-  relocate(names(ng1_attr))
-
-ng1_main <- ng1 %>% 
-  filter(case_id %in% main_ids)
-
-ng2_main <- ng2 %>% 
-  filter(case_id %in% main_ids) %>% 
-  relocate(names(ng1_main))
-
-ng3_main <- ng3 %>% 
-  filter(case_id %in% main_ids) %>% 
-  relocate(names(ng1_main))
-
-ng4_main <- ng4 %>% 
-  filter(case_id %in% main_ids) %>% 
-  relocate(names(ng1_main))
-
-# create the final dataset (removing attrition housheolds)
-ng <- rbind.data.frame(ng1_main,ng2_main,ng3_main,ng4_main) %>% 
-  left_join(ng1_geos %>% select(case_id,cluster_id,lat_1,lon_1), by = 'case_id') %>% 
-  rename(lat = lat_1, lon = lon_1) %>% 
-  mutate(case_id = paste(country,case_id,sep = '_')) %>% 
-  mutate(cluster_id = paste0('nga_',cluster_id)) %>%
-  select(country,year,wave,cluster_id,rural,lat,lon,case_id,
-         rooms,electric,floor_qual,wall_qual,roof_qual,cooking_fuel_qual,
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
          toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
          hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
-  mutate(across(everything(), as.vector)) 
-
-# create dataset only with households that are subject to attrition.
-ng_attr <- rbind.data.frame(ng1_attr, ng2_attr, ng3_attr) %>% 
-  left_join(ng1_geos %>% select(case_id,cluster_id,lat_1,lon_1), by = 'case_id') %>% 
-  rename(lat = lat_1, lon = lon_1) %>%   
-  mutate(cluster_id = paste0('nga_',cluster_id)) %>%
-  select(country,year,wave,cluster_id,rural,lat,lon,case_id,
-         rooms,electric,floor_qual,wall_qual,roof_qual,cooking_fuel_qual,
-         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
-         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
-  mutate(across(everything(), as.vector)) 
-
+  mutate_all(as.vector)
 
 # save data
-write.csv(ng,"../../Data/processed/nga_labels.csv", row.names = F)
-write.csv(ng_attr,"../../Data/processed/nga_labels_attr.csv", row.names = F)
+write.csv(short_panel,"../../Data/processed/nga_short_labels.csv", row.names = F)
+write.csv(long_panel,"../../Data/processed/nga_long_labels.csv", row.names = F)
+write.csv(short_panel_attr, "../../Data/processed/nga_short_labels_attr.csv", row.names = F)
+write.csv(long_panel_attr,"../../Data/processed/nga_long_labels_attr.csv", row.names =F)
 
 
 

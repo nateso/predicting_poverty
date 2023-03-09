@@ -37,9 +37,12 @@ w5_ids <- tz5_a %>%
   filter(y4_hhid %in% tz4_a$y4_hhid) %>% # make sure households are also in wave 1.
   select(y5_hhid, y4_hhid, clusterid, y5_cluster)
 
+tz_geos %<>% mutate(rural = ifelse(clustertype == 1, 1, 0)) %>% 
+  rename(lat = lat_modified, lon = lon_modified) %>% 
+  select(clusterid, rural, lat, lon)
+
 panel_ids <- w5_ids %>% 
-  left_join(tz_geos %>% select(clusterid, lat_modified, lon_modified), by = 'clusterid') %>% 
-  rename(lat = lat_modified, lon = lon_modified)
+  left_join(tz_geos, by = 'clusterid')
 
 #*******************************************************************************
 #### Housing characteristics ####
@@ -47,8 +50,8 @@ panel_ids <- w5_ids %>%
 extract_housing <- function(dat,id_var,rm,wl,rf,fl,toi,wat,fuel, electricity){
   vars <- c(id_var, rm,wl,rf,fl,toi,wat,fuel,electricity)
   aux <- dat %>% select(all_of(vars)) 
-  names(aux) <- c(id_var,'rooms','wall','roof','floor','toilet','watsup','cooking_fuel','elec')
-  aux <- aux %>% mutate(elec = ifelse(elec == 1,1,0))# %>% mutate_all(as.vector)
+  names(aux) <- c(id_var,'rooms','wall','roof','floor','toilet','watsup','cooking_fuel','electric')
+  aux <- aux %>% mutate(electric = ifelse(electric == 1,1,0))# %>% mutate_all(as.vector)
   return(aux)
 }
 
@@ -134,8 +137,8 @@ for(i in 1:length(cons_list)){
     select(matches('hhid'), adulteq, hhsize, expmR, year)
   cons_list[[i]] <- cons_list[[i]] %>% left_join(tza_cpi, by = 'year')
   cons_list[[i]]$cons_lcu_2017 <- (cons_list[[i]]$expmR * cons_list[[i]]$deflator_2017)/28
-  cons_list[[i]]$cons_lcu_pc_2017 = cons_list[[i]]$cons_lcu_2017 / cons_list[[i]]$hhsize
-  cons_list[[i]]$cons_usd_pc_2017 = cons_list[[i]]$cons_lcu_pc_2017 / 754.621459960938
+  cons_list[[i]]$cons_pc_lcu_2017 = cons_list[[i]]$cons_lcu_2017 / cons_list[[i]]$hhsize
+  cons_list[[i]]$cons_pc_usd_2017 = cons_list[[i]]$cons_pc_lcu_2017 / 754.621459960938
   cons_list[[i]] %<>% select(-expmR,-cons_lcu_2017,-deflator_2017) %>% relocate(year) %>% 
     mutate_all(as.vector) %>% rename(hh_size = hhsize)
 }
@@ -148,12 +151,16 @@ rm(cons_list)
 tz4 <- tz4_house %>% 
   left_join(tz4_ass, by = 'y4_hhid') %>% 
   left_join(tz4_cons, by = 'y4_hhid') %>% 
-  mutate(wave = 1)
+  mutate(wave = 1) %>% 
+  mutate(start_year = 2014, start_month = 10, end_year = 2015, end_month = 10)
+
 
 tz5 <- tz5_house %>% 
   left_join(tz5_ass, by = 'y5_hhid') %>% 
   left_join(tz5_cons, by = 'y5_hhid') %>% 
-  mutate(wave = 2)
+  mutate(wave = 2) %>% 
+  mutate(start_year = 2020, start_month = 12, end_year = 2022, end_month = 01)
+
 
 panel <- rbind.data.frame(
   tz4 %>% filter(tz4$y4_hhid %in% panel_ids$y4_hhid) %>% 
@@ -163,18 +170,30 @@ panel <- rbind.data.frame(
 )
 
 panel %<>% 
-  left_join(panel_ids %>% select(y5_hhid, y5_cluster, lat, lon), by = 'y5_hhid') %>% 
+  left_join(panel_ids %>% select(y5_hhid, y5_cluster, lat, lon, rural), by = 'y5_hhid') %>% 
   rename(case_id = y5_hhid, cluster_id = y5_cluster) %>% 
   mutate(country = 'tza') %>% 
-  relocate(country, year, wave, cluster_id, lat, lon, case_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
   mutate_all(as.vector)
 
 panel_attr <- tz4 %>% 
   filter((y4_hhid %in% panel_ids$y4_hhid)==F) %>% 
-  left_join(panel_ids %>% select(y4_hhid, clusterid, lat, lon), by = 'y4_hhid') %>% 
+  left_join(panel_ids %>% select(y4_hhid, clusterid, lat, lon, rural), by = 'y4_hhid') %>% 
   rename(case_id = y4_hhid, cluster_id = clusterid) %>% 
   mutate(country = 'tza') %>% 
-  relocate(country, year, wave, cluster_id, lat, lon, case_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
   mutate_all(as.vector)
 
 #*******************************************************************************

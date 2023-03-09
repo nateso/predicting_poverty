@@ -93,6 +93,12 @@ tz_geos <- tz1_geos %>% select(hhid, lat_modified, lon_modified) %>%
   left_join(tz1_a %>% select(hhid, clusterid), by = 'hhid') %>% 
   select(-hhid) %>% distinct()
 
+ea_rur_urb <- tz1_a %>% 
+  select(clusterid, rural) %>% distinct() %>% 
+  mutate(rural = ifelse(rural == 'Rural',1,0))
+
+tz_geos %<>% left_join(ea_rur_urb, by = 'clusterid') 
+
 ### long panel ids
 long_panel_ids <- w5_ids %>% 
   left_join(tz1_a %>% select(hhid,clusterid), by = c('y1_hhid'='hhid')) %>% 
@@ -115,8 +121,8 @@ short_panel_ids <- w3_ids %>%
 extract_housing <- function(dat,id_var,rm,wl,rf,fl,toi,wat,fuel, electricity){
   vars <- c(id_var, rm,wl,rf,fl,toi,wat,fuel,electricity)
   aux <- dat %>% select(all_of(vars)) 
-  names(aux) <- c(id_var,'rooms','wall','roof','floor','toilet','watsup','cooking_fuel','elec')
-  aux <- aux %>% mutate(elec = ifelse(elec == 1,1,0))# %>% mutate_all(as.vector)
+  names(aux) <- c(id_var,'rooms','wall','roof','floor','toilet','watsup','cooking_fuel','electric')
+  aux <- aux %>% mutate(electric = ifelse(electric == 1,1,0))# %>% mutate_all(as.vector)
   return(aux)
 }
 
@@ -244,10 +250,10 @@ tza_cpi %<>%
 
 
 # add year to all cons datasets
-tz1_cons$year <- 2008
-tz2_cons$year <- 2010
-tz3_cons$year <- 2012
-tz4_cons$year <- 2014
+tz1_cons$year <- 2009
+tz2_cons$year <- 2011
+tz3_cons$year <- 2013
+tz4_cons$year <- 2015
 tz5_cons$year <- 2019
 
 cons_list <- list(tz1_cons, tz2_cons, tz3_cons, tz4_cons, tz5_cons)
@@ -261,8 +267,8 @@ for(i in 1:length(cons_list)){
   names(cons_list[[i]])[-1] <- c('adulteq', 'hh_size', 'expmR', 'year')
   cons_list[[i]] <- cons_list[[i]] %>% left_join(tza_cpi, by = 'year')
   cons_list[[i]]$cons_lcu_2017 <- (cons_list[[i]]$expmR * cons_list[[i]]$deflator_2017)/365
-  cons_list[[i]]$cons_lcu_pc_2017 = cons_list[[i]]$cons_lcu_2017 / cons_list[[i]]$hh_size
-  cons_list[[i]]$cons_usd_pc_2017 = cons_list[[i]]$cons_lcu_pc_2017 / 754.621459960938
+  cons_list[[i]]$cons_pc_lcu_2017 = cons_list[[i]]$cons_lcu_2017 / cons_list[[i]]$hh_size
+  cons_list[[i]]$cons_pc_usd_2017 = cons_list[[i]]$cons_pc_lcu_2017 / 754.621459960938
   cons_list[[i]] %<>% select(-expmR,-cons_lcu_2017,-deflator_2017) %>% relocate(year) %>% 
     mutate_all(as.vector)
 }
@@ -275,27 +281,32 @@ rm(cons_list)
 tz1 <- tz1_house %>% 
   left_join(tz1_ass, by = 'hhid') %>% 
   left_join(tz1_cons, by = 'hhid') %>% 
-  mutate(wave = 1)
+  mutate(wave = 1) %>% 
+  mutate(start_year = 2008, start_month = 10, end_year = 2009, end_month = 09)
 
 tz2 <- tz2_house %>% 
   left_join(tz2_ass, by = 'y2_hhid') %>% 
   left_join(tz2_cons, by = 'y2_hhid') %>% 
-  mutate(wave = 2)
+  mutate(wave = 2) %>% 
+  mutate(start_year = 2010, start_month = 10, end_year = 2011, end_month = 09)
 
 tz3 <- tz3_house %>% 
   left_join(tz3_ass, by = 'y3_hhid') %>% 
   left_join(tz3_cons, by = 'y3_hhid') %>% 
-  mutate(wave = 3)
+  mutate(wave = 3) %>% 
+  mutate(start_year = 2012, start_month = 10, end_year = 2013, end_month = 11)
 
 tz4 <- tz4_house %>% 
   left_join(tz4_ass, by = 'y4_hhid') %>% 
   left_join(tz4_cons, by = 'y4_hhid') %>% 
-  mutate(wave = 4)
+  mutate(wave = 4) %>% 
+  mutate(start_year = 2014, start_month = 10, end_year = 2015, end_month = 10)
 
 tz5 <- tz5_house %>% 
   left_join(tz5_ass, by = 'sdd_hhid') %>% 
   left_join(tz5_cons, by = 'sdd_hhid') %>% 
-  mutate(wave = 5)
+  mutate(wave = 5) %>% 
+  mutate(start_year = 2019, start_month = 01, end_year = 2019, end_month = 12)
 
 #*******************************************************************************
 #### split data ####
@@ -327,10 +338,17 @@ long_panel <- rbind.data.frame(
 )
 
 short_panel %<>% 
-  left_join(short_panel_ids %>% select(y1_hhid,clusterid, lat, lon), by = 'y1_hhid') %>% 
+  left_join(short_panel_ids %>% select(y1_hhid,clusterid), by = 'y1_hhid') %>% 
+  left_join(tz_geos, by = 'clusterid') %>% 
   rename(case_id = y1_hhid, cluster_id = clusterid) %>% 
   mutate(country = 'tza') %>% 
-  relocate(country, year, wave, cluster_id, lat, lon, case_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
   mutate_all(as.vector)
 
 short_panel_attr <- tz1 %>% 
@@ -340,14 +358,27 @@ short_panel_attr <- tz1 %>%
   left_join(tz_geos, by = 'clusterid') %>% 
   rename(case_id = hhid, cluster_id = clusterid) %>% 
   mutate(country = 'tza') %>% 
-  relocate(country, year, wave, cluster_id, lat, lon, case_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
   mutate_all(as.vector)
 
 long_panel %<>% 
-  left_join(long_panel_ids %>% select(y1_hhid,clusterid, lat, lon), by = 'y1_hhid') %>% 
+  left_join(long_panel_ids %>% select(y1_hhid,clusterid), by = 'y1_hhid') %>% 
+  left_join(tz_geos, by = 'clusterid') %>% 
   rename(case_id = y1_hhid, cluster_id = clusterid) %>% 
   mutate(country = 'tza') %>% 
-  relocate(country, year, wave, cluster_id, lat, lon, case_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
   mutate_all(as.vector)
 
 long_panel_attr <- tz1 %>% 
@@ -357,7 +388,13 @@ long_panel_attr <- tz1 %>%
   left_join(tz_geos, by = 'clusterid') %>% 
   rename(case_id = hhid, cluster_id = clusterid) %>% 
   mutate(country = 'tza') %>% 
-  relocate(country, year, wave, cluster_id, lat, lon, case_id) %>% 
+  mutate(case_id = paste(country, case_id,sep = "_"),
+         cluster_id = paste(country, cluster_id, sep = "_")) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>% 
   mutate_all(as.vector)
 
 #*******************************************************************************

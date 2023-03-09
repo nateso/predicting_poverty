@@ -67,56 +67,105 @@ ug7_a = read_dta("../../Data/lsms/Uganda/UGA_2019/HH/gsec1.dta") # GPS data not 
 #* 4. Households that moved are included in the data (within and outside of EA.)
 
 # Geovariables and cluster ids
+
+# two problems: 
+# 1. get geovariables at the community level
+# 2. get consistent ID variables in the first wave
+
 ug_geos <- ug1_geos %>% 
-  filter(hh_status < 3,
-         is.na(dist_y0)) %>% # if dist_y0 is positive, it is considered that the household moved outside of the EA. (more than 5km)
-  left_join(ug0_a, by = c("HHID"='Hhid'),suffix = c("","_w0")) %>% 
-  select(HHID,lat_mod,lon_mod,Comm) %>% 
-  rename(w1_hhid = HHID, cluster_id = Comm, lat = lat_mod, lon = lon_mod)
+  mutate(dist_y0 = ifelse(is.na(dist_y0),0,dist_y0)) %>% 
+  filter(dist_y0 < 1) %>% 
+  mutate(hhid_ea = substr(HHID,1,8)) %>% 
+  select(hhid_ea, lat_mod, lon_mod) %>%
+  filter(!is.na(lat_mod)) %>% 
+  rename(lat = lat_mod, lon = lon_mod) %>% 
+  distinct()
 
-hhid_comm <- ug_geos %>% select(w1_hhid,cluster_id) %>% mutate_all(as.vector)
+ea_ids <- ug0_a %>% 
+  mutate(hhid_ea = substr(Hhid,1,8)) %>% 
+  mutate(rural = ifelse(Substrat == 3,1,0)) %>% 
+  select(Comm, hhid_ea, rural) %>% distinct() %>% 
+  rename(cluster_id = Comm) %>% 
+  left_join(ug_geos, by = 'hhid_ea')
 
-ug_geos %<>% drop_na() %>% # drop entry if any lat or lon is na
-  select(-w1_hhid) %>% distinct() # one pair of coordinates for each cluster.
+# ea_ids links the hhid_ea derived from the household id to the 7 digit cluster_id
+# in total there are 322 clusters at wave 0
+
+# hhid_comm <- ug1_a %>% 
+#   select(HHID,comm)
+# 
+# ug_geos <- ug1_geos %>% 
+#   filter(hh_status < 3) %>% 
+#   mutate(dist_y0 = ifelse(is.na(dist_y0),0,dist_y0)) %>% 
+#   filter(dist_y0 < 1) %>% 
+#   left_join(ug0_a, by = c("HHID"='Hhid'),suffix = c("","_w0")) %>% 
+#   select(HHID,lat_mod,lon_mod,Comm) %>% 
+#   rename(w1_hhid = HHID, cluster_id = Comm, lat = lat_mod, lon = lon_mod)
+# 
+# hhid_comm <- ug_geos %>% select(w1_hhid,cluster_id) %>% mutate_all(as.vector)
+# 
+# ug_geos %<>% drop_na() %>% # drop entry if any lat or lon is na
+#   select(-w1_hhid) %>% distinct() # one pair of coordinates for each cluster.
 
 ###### get ids for each round (removing split-offs and checking whether household moved.)
 
-# wave 1 / baseline households
-w1_ids <- hhid_comm %>% select(w1_hhid) %>% 
-  filter(w1_hhid %in% ug1_cons$hhid)
+# id variable of the consumption data in the first wave is not consistent, thus adapt
+ug1_cons %<>% 
+  mutate(id_comm = substr(hhid,1,8),
+         id_hh = substr(hhid,9,nchar(hhid)),
+         HHID = paste0(as.character(comm),id_hh)) %>% 
+  select(-id_comm, -id_hh, -hhid)
+
+w0_ids <- ug0_a %>% 
+  select(Hhid, Comm) %>% 
+  rename(w0_hhid = Hhid, cluster_id = Comm)
+
+# wave 1
+w1_ids <- ug1_a %>% 
+  filter(HHID %in% w0_ids$w0_hhid) %>% # removing split-off households
+  filter(HHID %in% ug1_cons$HHID) %>% # remove households where no cons data is available
+  left_join(ug1_geos %>% select(HHID, dist_y0), by = 'HHID') %>% 
+  mutate(dist_y0 = ifelse(is.na(dist_y0),0,dist_y0)) %>% 
+  filter(dist_y0 < 10) %>% # remove households that moved out of ea
+  rename(w1_hhid = HHID) %>% 
+  mutate(hhid_ea = substr(w1_hhid,1,8)) %>% 
+  select(w1_hhid, hhid_ea)
 
 # wave 2 
 w2_ids <- ug2_a %>% 
+  filter(HHID %in% ug2_cons$hh) %>% #remove households where no cons data is available
   filter(HHID %in% w1_ids$w1_hhid) %>% # remove split-offs 
   left_join(ug2_geos %>% select(HHID,dist_y0), by = 'HHID') %>% 
-  mutate(moved_EA = ifelse(is.na(dist_y0),0,1)) %>% 
-  filter(moved_EA == 0) %>% # remove households that moved
-  select(HHID) %>% 
+  mutate(dist_y0 = ifelse(is.na(dist_y0),0,dist_y0)) %>% 
+  filter(dist_y0 < 10) %>% # remove households that moved
+  mutate(hhid_ea = substr(HHID,1,8)) %>% 
   rename(w1_hhid = HHID) %>% 
-  filter(w1_hhid %in% ug2_cons$hh)
+  select(w1_hhid, hhid_ea)
   
 # wave 3 
 w3_ids <- ug3_a %>% 
   filter(HHID %in% w2_ids$w1_hhid) %>% # remove split-offs
+  filter(HHID %in% ug3_cons$HHID) %>% # remove households where no cons data is available
   left_join(ug3_geos %>% select(HHID,dist_y0), by = 'HHID') %>% 
-  mutate(moved_EA = ifelse(is.na(dist_y0),0,1)) %>% 
-  filter(moved_EA == 0) %>% # remove households that moved
-  select(HHID) %>% 
+  mutate(dist_y0 = ifelse(is.na(dist_y0),0,dist_y0)) %>% 
+  filter(dist_y0 < 10) %>% # remove households that moved
+  mutate(hhid_ea = substr(HHID,1,8)) %>% 
   rename(w1_hhid = HHID) %>% 
-  filter(w1_hhid %in% ug3_cons$HHID)
+  select(w1_hhid, hhid_ea)
 
 # Starting in wave 4, GPS data is no longer available
 # 1/3 of the sample was refreshed in wave 4 - however no GPS data available for the new EAs
 
 # wave 4 - remove split-off households
 w4_ids <- ug4_a %>% 
+  filter(HHID %in% ug4_cons$HHID) %>% 
   filter(rotate == 1) %>% # 0 indicates brand-new households, 2 indicates split-offs (but no new split-offs)
-  mutate(HHID_old = as.character(HHID_old)) %>% 
-  filter(is.na(HHID_old) == F) %>% # Remove households that have no old HHID (split-offs? or households that moved?)
+  filter(!is.na(HHID_old)) %>% # Remove households that have no old HHID (split-offs? or households that moved?)
   filter(HHID_old %in% w3_ids$w1_hhid) %>% # remove split-off households from earlier periods
-  select(HHID,HHID_old) %>% 
-  rename(w4_hhid=HHID, w1_hhid = HHID_old) %>% 
-  filter(w4_hhid %in% ug4_cons$HHID)
+  mutate(w1_hhid = as.character(HHID_old),
+         w4_hhid = HHID,
+         hhid_ea = substr(w1_hhid,1,8)) %>% 
+  select(w4_hhid, w1_hhid, hhid_ea)
 
 # wave 5 - remove split-off households
 ug5_a %<>%
@@ -133,45 +182,38 @@ w6_ids <- ug6_a %>%
   filter(t0_hhid %in% w5_ids$w5_hhid) %>% 
   select(hhid,t0_hhid) %>% 
   rename(w6_hhid=hhid, w5_hhid = t0_hhid) %>% 
-  filter(w6_hhid %in% ug6_cons$hhid)
+  filter(w6_hhid %in% ug6_cons$hhid) %>% 
+  filter(!duplicated(w5_hhid))
 
 # wave 7 - remove split-off households
 w7_ids <- ug7_a %>% 
   filter(hhidold != "") %>% 
   filter(hhidold %in% w6_ids$w6_hhid) %>% 
   select(hhid,hhidold) %>% 
-  rename('w7_hhid'=hhid, w6_hhid = hhidold) %>% 
+  rename(w7_hhid = hhid, w6_hhid = hhidold) %>% 
   filter(w7_hhid %in% ug7_cons$hhid[ug7_cons$cpexp30 > 0]) # some report consumption = 0
 
 #### check which EAs are long-panel EAs and which ones belong to the short panel only
-eas <- unique(hhid_comm$cluster_id) 
-long_eas <- w4_ids %>% 
-  left_join(hhid_comm, by = "w1_hhid") 
-long_eas <- unique(long_eas$cluster_id)
-short_eas <- eas[(eas %in% long_eas) == F]
-
-short_panel_ids <- w3_ids %>% 
-  left_join(hhid_comm,by = 'w1_hhid') %>% 
-  filter(cluster_id %in% short_eas)
-
 long_panel_ids <- w7_ids %>% 
   left_join(w6_ids, by = 'w6_hhid') %>%
   left_join(w5_ids, by = 'w5_hhid') %>% 
   left_join(w4_ids, by = 'w4_hhid') %>% 
-  left_join(w3_ids, by = 'w1_hhid') %>% 
-  left_join(hhid_comm, by = 'w1_hhid') %>% 
-  filter(cluster_id %in% long_eas)
+  left_join(ea_ids, by = 'hhid_ea')
 
+long_panel_eas <- unique(long_panel_ids$hhid_ea)
+short_panel_eas <- ea_ids$hhid_ea[(ea_ids$hhid_ea %in% long_panel_eas) == F]
+
+short_panel_ids <- w3_ids %>% 
+  filter(hhid_ea %in% short_panel_eas) %>% 
+  left_join(ea_ids, by = 'hhid_ea')
 #...............................................................................
 ##### Housing characteristics #####
 #...............................................................................
 
 extract_housing <- function(dat,id_var,rm,wl,rf,fl,toi,wat){
   vars <- c(id_var, rm,wl,rf,fl,toi,wat)
-  aux <- dat %>%
-    select(all_of(vars)) %>% 
-    rename(rooms = rm, wall = wl, roof = rf, floor=fl, 
-           toilet=toi, watsup=wat) 
+  aux <- dat %>% select(all_of(vars))
+  names(aux)[-1] <- c("rooms",'wall', 'roof', 'floor', 'toilet', 'watsup')
   return(aux)
 }
 
@@ -189,10 +231,10 @@ ug7_house <- extract_housing(ug7_house,'hhid','h9q03','h9q05','h9q04','h9q06','h
 # electricity and fuel are in a different questionnaire
 extract_electric <- function(dat, id_var, path, elec_var, fuel_var){
   elec <- read_dta(path) %>% 
-    rename('electric' = elec_var,
-           'cooking_fuel' = fuel_var) %>% 
+    rename('electric' = all_of(elec_var),
+           'cooking_fuel' = all_of(fuel_var)) %>% 
     mutate(electric = ifelse(electric == 2,0,1)) %>% 
-    select(id_var,electric,cooking_fuel)
+    select(all_of(id_var),electric,cooking_fuel)
   aux <- dat %>% left_join(elec,by = id_var) %>%  mutate_all(as.vector)
   return(aux)
 }
@@ -285,6 +327,7 @@ for(i in 1:length(early_ass)){
     mutate(own = ifelse(h14q3 == 1,1,0)) %>% 
     select(matches('hhid'),label,own) %>% 
     pivot_wider(names_from = label, values_from = own)
+  early_ass[[i]]$fridge <- NA 
 }
 list2env(early_ass,globalenv())
 rm(early_ass)
@@ -335,8 +378,8 @@ for(i in 1:length(cons_list)){
   else{
     cons_list[[i]]$cons_lcu_2017 = (cons_list[[i]]$cpex30 * uga_2005_deflator)/30
   }
-  cons_list[[i]]$cons_lcu_pc_2017 = cons_list[[i]]$cons_lcu_2017 / cons_list[[i]]$hh_size
-  cons_list[[i]]$cons_usd_pc_2017 = cons_list[[i]]$cons_lcu_pc_2017 / 1221.08764648438
+  cons_list[[i]]$cons_pc_lcu_2017 = cons_list[[i]]$cons_lcu_2017 / cons_list[[i]]$hh_size
+  cons_list[[i]]$cons_pc_usd_2017 = cons_list[[i]]$cons_pc_lcu_2017 / 1221.08764648438
   cons_list[[i]] %<>% select(-cpex30,-cons_lcu_2017) 
 }
 list2env(cons_list,globalenv())
@@ -349,104 +392,138 @@ ug1 <- ug1_cons %>%
   left_join(ug1_house, by = c('hhid' = 'HHID')) %>% 
   left_join(ug1_ass, by = c('hhid' = 'HHID')) %>% 
   rename(w1_hhid = hhid) %>% 
-  mutate(wave = 1, year = 2009)
+  mutate(wave = 1) %>% 
+  mutate(start_year = 2009, start_month = 09, end_year = 2010, end_month = 08)
 
 ug2 <- ug2_cons %>% 
   left_join(ug2_house, by = c('hhid' = 'HHID')) %>% 
   left_join(ug2_ass, by = c('hhid' = 'HHID')) %>% 
   rename(w1_hhid = hhid)%>% 
-  mutate(wave = 2, year = 2010)
+  mutate(wave = 2) %>% 
+  mutate(start_year = 2010, start_month = 10, end_year = 2011, end_month = 08)
 
 ug3 <- ug3_cons %>% 
   left_join(ug3_house, by = c('hhid' = 'HHID')) %>% 
   left_join(ug3_ass, by = c('hhid' = 'HHID')) %>% 
   rename(w1_hhid = hhid)%>% 
-  mutate(wave = 3, year = 2011)
+  mutate(wave = 3) %>% 
+  mutate(start_year = 2011, start_month = 11, end_year = 2012, end_month = 11)
 
 ug4 <- ug4_cons %>% 
   left_join(ug4_house, by = c('hhid' = 'HHID')) %>% 
   left_join(ug4_ass, by = c('hhid' = 'HHID')) %>% 
   rename(w4_hhid = hhid) %>% 
-  mutate(wave = 4, year = 2013) %>% 
-  filter(w4_hhid %in% long_panel_ids$w4_hhid) %>% 
-  left_join(long_panel_ids %>% select(w4_hhid,w1_hhid,cluster_id), by = 'w4_hhid') %>% 
-  select(-w4_hhid) %>% relocate(w1_hhid, cluster_id)
+  mutate(wave = 4) %>% 
+  mutate(start_year = 2013, start_month = 09, end_year = 2014, end_month = 08) %>% 
+  filter(w4_hhid %in% long_panel_ids$w4_hhid) %>%
+  left_join(long_panel_ids %>% select(w4_hhid,w1_hhid,hhid_ea), by = 'w4_hhid') %>%
+  select(-w4_hhid) %>% relocate(w1_hhid, hhid_ea) %>% 
+  distinct()
 
 ug5 <- ug5_cons %>% 
   rename(w5_hhid = hhid) %>% 
   left_join(ug5_house, by = 'w5_hhid') %>% 
   left_join(ug5_ass, by = 'w5_hhid') %>% 
-  mutate(wave = 5, year = 2015) %>% 
-  filter(w5_hhid %in% long_panel_ids$w5_hh) %>% 
-  left_join(long_panel_ids %>% select(w5_hh,w1_hhid,cluster_id), by = c('w5_hhid' = 'w5_hh')) %>% 
-  select(-w5_hhid) %>% relocate(w1_hhid, cluster_id)
+  mutate(wave = 5) %>% 
+  mutate(start_year = 2015, start_month = 03, end_year = 2016, end_month = 03) %>% 
+  filter(w5_hhid %in% long_panel_ids$w5_hh) %>%
+  left_join(long_panel_ids %>% select(w5_hh,w1_hhid,hhid_ea), by = c('w5_hhid' = 'w5_hh')) %>%
+  select(-w5_hhid) %>% relocate(w1_hhid, hhid_ea)
 
 ug6 <- ug6_cons %>% 
   left_join(ug6_house, by = 'hhid') %>% 
   left_join(ug6_ass, by = 'hhid') %>% 
   rename(w6_hhid = hhid) %>% 
-  mutate(wave = 6, year = 2018) %>% 
-  filter(w6_hhid %in% long_panel_ids$w6_hhid) %>% 
-  left_join(long_panel_ids %>% select(w6_hhid,w1_hhid,cluster_id), by = 'w6_hhid') %>% 
-  select(-w6_hhid) %>% relocate(w1_hhid, cluster_id)
+  mutate(wave = 6) %>% 
+  mutate(start_year = 2018, start_month = 03, end_year = 2019, end_month = 01) %>% 
+  filter(w6_hhid %in% long_panel_ids$w6_hhid) %>%
+  left_join(long_panel_ids %>% select(w6_hhid,w1_hhid,hhid_ea), by = 'w6_hhid') %>%
+  select(-w6_hhid) %>% relocate(w1_hhid, hhid_ea)
 
 ug7 <- ug7_cons %>% 
   left_join(ug7_house, by = 'hhid') %>% 
   left_join(ug7_ass, by = 'hhid') %>% 
   rename(w7_hhid = hhid) %>% 
-  mutate(wave = 7, year = 2019) %>% 
-  filter(w7_hhid %in% long_panel_ids$w7_hhid) %>% 
-  left_join(long_panel_ids %>% select(w7_hhid,w1_hhid,cluster_id), by = 'w7_hhid') %>% 
-  select(-w7_hhid) %>% relocate(w1_hhid, cluster_id)
+  mutate(wave = 7) %>% 
+  mutate(start_year = 2019, start_month = 04, end_year = 2020, end_month = 02) %>% 
+  filter(w7_hhid %in% long_panel_ids$w7_hhid) %>%
+  left_join(long_panel_ids %>% select(w7_hhid,w1_hhid,hhid_ea), by = 'w7_hhid') %>%
+  select(-w7_hhid) %>% relocate(w1_hhid, hhid_ea)
 
+#...............................................................................
+##### merge data and split into attr and main data #####
+#...............................................................................
 
 #### create short panel dataset
 short_panel <- rbind.data.frame(ug1,ug2,ug3) %>% 
   filter(w1_hhid %in% short_panel_ids$w1_hhid) %>% 
   left_join(short_panel_ids, by = 'w1_hhid') %>% 
-  left_join(ug_geos, by = 'cluster_id') %>% 
   mutate(country = 'uga') %>% 
-  mutate(cluster_id = paste(country,cluster_id,sep = "_")) %>% 
-  rename(case_id = w1_hhid) %>% 
-  relocate(country,year,wave,cluster_id,lat,lon,case_id) %>% 
+  mutate(cluster_id = paste(country, cluster_id, sep = "_"),
+         case_id = paste(country, w1_hhid, sep = '_')) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>%   
   mutate_all(as.vector)
 
 #### create long panel dataset
-long_panel <- rbind.data.frame(ug1,ug2,ug3) %>% 
-  filter(w1_hhid %in% long_panel_ids$w1_hhid) %>% 
-  left_join(long_panel_ids %>% select(w1_hhid, cluster_id), by = 'w1_hhid') %>% 
-  relocate(w1_hhid, cluster_id)
+long_panel <- rbind.data.frame(
+  ug1 %>% filter(w1_hhid %in% long_panel_ids$w1_hhid) %>% 
+    left_join(long_panel_ids %>% select(w1_hhid, hhid_ea), by = 'w1_hhid'),
+  ug2 %>% filter(w1_hhid %in% long_panel_ids$w1_hhid) %>% 
+    left_join(long_panel_ids %>% select(w1_hhid, hhid_ea), by = 'w1_hhid'),  
+  ug3 %>% filter(w1_hhid %in% long_panel_ids$w1_hhid) %>% 
+    left_join(long_panel_ids %>% select(w1_hhid, hhid_ea), by = 'w1_hhid'),
+  ug4 %>% filter(w1_hhid %in% long_panel_ids$w1_hhid),
+  ug5 %>% filter(w1_hhid %in% long_panel_ids$w1_hhid),
+  ug6 %>% filter(w1_hhid %in% long_panel_ids$w1_hhid),
+  ug7 %>% filter(w1_hhid %in% long_panel_ids$w1_hhid)
+)
 
-long_panel <- rbind.data.frame(long_panel,ug4,ug5,ug6,ug7) %>% 
-  left_join(ug_geos, by = 'cluster_id') %>% 
+long_panel %<>% 
+  left_join(ea_ids, by = 'hhid_ea') %>% 
   mutate(country = 'uga') %>% 
-  mutate(cluster_id = paste(country,cluster_id,sep = "_")) %>% 
-  rename(case_id = w1_hhid) %>% 
-  relocate(country,year,wave,cluster_id,lat,lon,case_id) %>% 
+  mutate(cluster_id = paste(country, cluster_id, sep = "_"),
+         case_id = paste(country, w1_hhid, sep = '_')) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>%   
   mutate_all(as.vector)
 
 #### short panel attrition
 # only consider households from the very first wave
-short_panel_attr <- hhid_comm %>% 
-  filter(cluster_id %in% short_eas) %>% 
-  filter((w1_hhid %in% short_panel$case_id) == F) %>% 
-  left_join(ug1, by = 'w1_hhid') %>% 
-  left_join(ug_geos, by = 'cluster_id') %>% 
+short_panel_attr <- ug1 %>%
+  mutate(hhid_ea = substr(w1_hhid,1,8)) %>% 
+  filter(hhid_ea %in% short_panel_eas) %>% 
+  left_join(ea_ids, by = 'hhid_ea') %>% 
   mutate(country = 'uga') %>% 
-  mutate(cluster_id = paste(country,cluster_id,sep = "_")) %>% 
-  rename(case_id = w1_hhid) %>% 
-  relocate(country,year,wave,cluster_id,lat,lon,case_id) %>% 
+  mutate(cluster_id = paste(country, cluster_id, sep = "_"),
+         case_id = paste(country, w1_hhid, sep = '_')) %>% 
+  filter((case_id %in% short_panel$case_id) == F) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>%   
   mutate_all(as.vector)
-
-long_panel_attr <- hhid_comm %>% 
-  filter(cluster_id %in% long_eas) %>% 
-  filter((w1_hhid %in% long_panel$case_id) == F) %>% 
-  left_join(ug1, by = 'w1_hhid') %>% 
-  left_join(ug_geos, by = 'cluster_id') %>% 
+  
+long_panel_attr <- ug1 %>%
+  mutate(hhid_ea = substr(w1_hhid,1,8)) %>% 
+  filter(hhid_ea %in% long_panel_eas) %>% 
+  left_join(ea_ids, by = 'hhid_ea') %>% 
   mutate(country = 'uga') %>% 
-  mutate(cluster_id = paste(country,cluster_id,sep = "_")) %>% 
-  rename(case_id = w1_hhid) %>% 
-  relocate(country,year,wave,cluster_id,lat,lon,case_id) %>% 
+  mutate(cluster_id = paste(country, cluster_id, sep = "_"),
+         case_id = paste(country, w1_hhid, sep = '_')) %>% 
+  filter((case_id %in% long_panel$case_id) == F) %>% 
+  select(country,start_year, start_month, end_year, end_month, wave,
+         cluster_id,rural,lat,lon,case_id,rooms,electric,floor_qual,wall_qual,
+         roof_qual,cooking_fuel_qual,
+         toilet_qual,watsup_qual,radio,tv,bike,motorcycle,fridge,car,phone,
+         hh_size,adulteq,cons_pc_lcu_2017,cons_pc_usd_2017) %>%   
   mutate_all(as.vector)
 
 #...............................................................................
