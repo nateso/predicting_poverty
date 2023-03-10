@@ -146,10 +146,12 @@ et2_house = et2_house %>%
 
 et3_house = et3_house %>%
   select(household_id2, hh_s9q04, hh_s9q05, hh_s9q06, hh_s9q07, 
-         hh_s9q10, hh_s9q13, hh_s9q19_a, hh_s9q21) %>%
+         hh_s9q10, hh_s9q13, hh_s9q13_e, hh_s9q19_a, hh_s9q21) %>%
   rename(rooms=hh_s9q04, wall = hh_s9q05, roof = hh_s9q06, floor=hh_s9q07, 
          toilet=hh_s9q10, watsup=hh_s9q13, electric=hh_s9q19_a, cooking_fuel = hh_s9q21) %>%
-  mutate(electric=ifelse(electric<=4, 1, 0)) 
+  mutate(electric=ifelse(electric<=4, 1, 0),
+         watsup = ifelse(is.na(watsup), hh_s9q13_e, watsup)) %>% 
+  select(-hh_s9q13_e)
 
 #*******************************************************************************
 ###### Recode Housing ######
@@ -179,7 +181,6 @@ et2_house %<>%
   left_join(watsup,by = c('watsup' = 'watsup_code')) %>% 
   select(-floor, -wall, -roof, -cooking_fuel, -toilet, -watsup)
 
-
 # the variables for wave 3 change slightly. Thus adapt recode...
 watsup = read.csv("../../Data/lsms/Ethiopia/recode/watsup_recode_w3.csv")
 toilet = read.csv("../../Data/lsms/Ethiopia/recode/toilet_recode_w3.csv")
@@ -190,7 +191,7 @@ et3_house %<>%
   left_join(roof,by = c('roof' = 'roof_code')) %>% 
   left_join(cooking_fuel,by = c('cooking_fuel' = 'cooking_fuel_code')) %>% 
   left_join(toilet,by = c('toilet' = 'toilet_code')) %>% 
-  left_join(watsup,by = c('watsup' = 'watsup_code')) %>% 
+  left_join(watsup,by = 'watsup') %>% 
   select(-floor, -wall, -roof, -cooking_fuel, -toilet, -watsup)
 
 rm(floor, wall, roof, cooking_fuel, toilet, watsup)
