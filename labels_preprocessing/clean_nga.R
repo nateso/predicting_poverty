@@ -45,7 +45,8 @@ ng4_geos <- read_dta("../../Data/lsms/Nigeria/NGA_2018/nga_householdgeovars_y4.d
 ng1_geos %<>%
   mutate(cluster_id = paste0(lga,"_",ea)) %>% 
   mutate(case_id = paste0(lga,"_",ea,"_",hhid)) %>% 
-  select(cluster_id, case_id, hhid, lat_dd_mod, lon_dd_mod) %>% 
+  mutate(rural = ifelse(sector == 2,1,0)) %>% 
+  select(cluster_id, case_id, hhid, lat_dd_mod, lon_dd_mod, rural) %>% 
   rename(lat_1 = lat_dd_mod, lon_1 = lon_dd_mod)
 
 ng2_geos %<>% 
@@ -73,7 +74,7 @@ ng4_geos %<>%
 
 #### panel eas
 ea_geos <- ng1_geos %>% 
-  select(cluster_id, lat_1, lon_1) %>% 
+  select(cluster_id, lat_1, lon_1, rural) %>% 
   distinct()
 
 long_panel_eas <- ng4_geos %>% 
@@ -150,7 +151,7 @@ short_panel_ids <- w3_ids %>%
 ng1_house %<>%
   mutate(case_id = paste0(lga,"_",ea,"_",hhid)) %>%
   select(case_id, s8q6, s8q7, s8q8, s8q9, s8q11, s8q17, s8q29, 
-         s8q31, s8q33c, s8q36a) %>% 
+         s8q31, s8q33a, s8q33c, s8q36a) %>% 
   mutate(s8q17 = ifelse(s8q17 == 2,0,1), 
          s8q29 = ifelse(s8q29 == 2,0,1), 
          s8q31 = ifelse(s8q31 == 2,0,1)) %>% 
@@ -158,14 +159,15 @@ ng1_house %<>%
   rename(wall = s8q6, roof = s8q7, floor = s8q8, rooms=s8q9, 
          cooking_fuel = s8q11, electric=s8q17, watsup=s8q33c,
          toilet=s8q36a) %>% 
-  select(-s8q29, -s8q31) %>%
+  mutate(watsup = ifelse(is.na(watsup), s8q33a, watsup)) %>% 
+  select(-s8q29, -s8q31, -s8q33a) %>%
   relocate(case_id, rooms, wall, roof, floor, electric, 
            watsup, toilet, cooking_fuel, phone)
 
 ng2_house %<>% 
   mutate(case_id = paste0(lga,"_",ea,"_",hhid)) %>%
   select(case_id, s8q6, s8q7, s8q8, s8q9, s8q11, s8q17, s8q29, 
-         s8q31, s8q33b, s8q36) %>% 
+         s8q31, s8q33a, s8q33b, s8q36) %>% 
   mutate(s8q17 = ifelse(s8q17 == 2,0,1), 
          s8q29 = ifelse(s8q29 == 2,0,1), 
          s8q31 = ifelse(s8q31 == 2,0,1)) %>% 
@@ -173,19 +175,22 @@ ng2_house %<>%
   rename(wall = s8q6, roof = s8q7, floor = s8q8, rooms=s8q9, 
          cooking_fuel = s8q11, electric=s8q17, watsup=s8q33b,
          toilet=s8q36) %>% 
-  select(-s8q29, -s8q31) %>%
+  mutate(watsup = ifelse(is.na(watsup), s8q33a, watsup)) %>% 
+  select(-s8q29, -s8q31, -s8q33a) %>%
   relocate(case_id, rooms, wall, roof, floor, electric, 
            watsup, toilet, cooking_fuel, phone)
     
 ng3_house %<>% 
   mutate(case_id = paste0(lga,"_",ea,"_",hhid)) %>%
   select(case_id, s11q6, s11q7, s11q8, s11q9, s11q11, s11q17b, 
-         s11q31, s11q33b, s11q36) %>% 
+         s11q31, s11q33a, s11q33b, s11q36) %>% 
   mutate(s11q17b = ifelse(s11q17b == 2,0,1), 
          s11q31 = ifelse(s11q31 == 2,0,1)) %>% 
   rename(wall = s11q6, roof = s11q7, floor = s11q8, rooms=s11q9, 
          cooking_fuel = s11q11, electric=s11q17b, watsup=s11q33b,
          toilet=s11q36, phone = s11q31) %>% 
+  mutate(watsup = ifelse(is.na(watsup), s11q33a, watsup)) %>% 
+  select(-s11q33a) %>% 
   relocate(case_id, rooms, wall, roof, floor, electric, 
            watsup, toilet, cooking_fuel, phone)
 
@@ -307,67 +312,71 @@ ng_cpi <- read.csv("../../Data/lsms/Nigeria/cpi.csv") %>%
   summarise(yearly_cpi = sum(cpi)/12) %>% 
   ungroup() %>%
   filter(type != "Composite") %>% 
-  mutate(urban = ifelse(type == "Urban",1,0)) %>% 
-  mutate(deflator_2017 = ifelse(urban == 0, 231.65356/yearly_cpi, 235.55351/yearly_cpi)) %>% 
+  mutate(rural = ifelse(type == "Urban",0,1)) %>% 
+  mutate(deflator_2017 = ifelse(rural == 0, 231.65356/yearly_cpi, 235.55351/yearly_cpi)) %>% 
   select(-type, -yearly_cpi)
 
-ng1_cons <- ng1_cons_1 %>% 
-  left_join(ng1_geos %>% select(case_id, hhid), by = 'hhid') %>%
-  mutate(year_1 = surveyprd, year_2 = surveyprd + 1) %>% 
-  left_join(ng_cpi, by = c("year_1" = 'year', 'rururb' = 'urban')) %>% 
-  left_join(ng_cpi, by = c("year_2" = 'year', 'rururb' = 'urban'), suffix = c("_1","_2")) %>% 
-  left_join(ng1_cons_2 %>% select(hhid, totcons), by = 'hhid', suffix = c("_1","_2")) %>% 
+ng1_cons <- ng1_geos %>% 
+  select(hhid, case_id, rural) %>% 
+  left_join(ng1_cons_1 %>% select(hhid, totcons, surveyprd, rururb, hhsize), by = 'hhid') %>% 
+  left_join(ng1_cons_2 %>% select(hhid, totcons, surveyprd, rururb, hhsize), by = 'hhid', suffix = c("_1","_2")) %>% 
+  rename(year_1 = surveyprd_1, year_2 = surveyprd_2) %>% 
+  mutate(hhsize = ifelse(is.na(hhsize_1), hhsize_2, hhsize_1)) %>% 
+  left_join(ng_cpi, by = c("year_1" = 'year', 'rural' = 'rural')) %>% 
+  left_join(ng_cpi, by = c("year_2" = 'year', 'rural' = 'rural'), suffix = c("_1","_2")) %>% 
   mutate(both_avail = ifelse(is.na(totcons_1) + is.na(totcons_2) == 0,1,0)) %>% 
   mutate(totcons_2017 = ifelse(both_avail == 1, (totcons_1 * deflator_2017_1 + totcons_2 * deflator_2017_2)/2, 
                                ifelse(is.na(totcons_1), totcons_2 * deflator_2017_2, totcons_1 * deflator_2017_1))) %>% 
   mutate(cons_pc_lcu_2017 = totcons_2017/365) %>% 
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (112.098327636719)) %>% # converts the LCU into 2017 USD.
-  mutate(rural = ifelse(rururb == 0,1,0),
-         adulteq = NA) %>% 
+  mutate(adulteq = NA) %>% 
   rename(hh_size = hhsize) %>% 
   select(case_id, rural, hh_size, adulteq, cons_pc_lcu_2017,cons_pc_usd_2017)
 
-ng2_cons <- ng2_cons_2 %>% 
-  left_join(ng2_geos %>% select(case_id, hhid), by = 'hhid') %>%
-  mutate(year_1 = surveyprd, year_2 = surveyprd + 1) %>% 
-  left_join(ng_cpi, by = c("year_1" = 'year', 'rururb' = 'urban')) %>% 
-  left_join(ng_cpi, by = c("year_2" = 'year', 'rururb' = 'urban'), suffix = c("_1","_2")) %>% 
-  left_join(ng2_cons_1 %>% select(hhid,totcons), by = 'hhid', suffix = c("_2","_1")) %>%
+ng2_cons <- ng2_geos %>% 
+  select(hhid, case_id, cluster_id) %>%
+  left_join(ea_geos %>% select(cluster_id, rural), by = 'cluster_id') %>% 
+  left_join(ng2_cons_1 %>% select(hhid, totcons, surveyprd, hhsize), by = 'hhid') %>% 
+  left_join(ng2_cons_2 %>% select(hhid, totcons, surveyprd, hhsize), by = 'hhid', suffix = c("_1","_2")) %>% 
+  rename(year_1 = surveyprd_1, year_2 = surveyprd_2) %>% 
+  mutate(hhsize = ifelse(is.na(hhsize_1), hhsize_2, hhsize_1)) %>% 
+  left_join(ng_cpi, by = c("year_1" = 'year', 'rural' = 'rural')) %>% 
+  left_join(ng_cpi, by = c("year_2" = 'year', 'rural' = 'rural'), suffix = c("_1","_2")) %>% 
   mutate(both_avail = ifelse(is.na(totcons_1) + is.na(totcons_2) == 0,1,0)) %>% 
   mutate(totcons_2017 = ifelse(both_avail == 1, (totcons_1 * deflator_2017_1 + totcons_2 * deflator_2017_2)/2, 
                                ifelse(is.na(totcons_1), totcons_2 * deflator_2017_2, totcons_1 * deflator_2017_1))) %>% 
   mutate(cons_pc_lcu_2017 = totcons_2017/365) %>% 
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (112.098327636719)) %>% # converts the LCU into 2017 USD.
-  mutate(rural = ifelse(rururb == 0,1,0),
-         adulteq = NA) %>% 
+  mutate(adulteq = NA) %>% 
   rename(hh_size = hhsize) %>% 
   select(case_id, rural, hh_size, adulteq, cons_pc_lcu_2017,cons_pc_usd_2017)
 
-ng3_cons <- ng3_cons_1 %>% 
-  left_join(ng3_geos %>% select(case_id, hhid), by = 'hhid') %>%
-  mutate(year_1 = surveyprd, year_2 = surveyprd + 1) %>% 
-  left_join(ng_cpi, by = c("year_1" = 'year', 'rururb' = 'urban')) %>% 
-  left_join(ng_cpi, by = c("year_2" = 'year', 'rururb' = 'urban'), suffix = c("_1","_2")) %>% 
-  left_join(ng3_cons_2 %>% select(hhid,totcons), by = 'hhid', suffix = c("_1","_2")) %>%
+ng3_cons <- ng3_geos %>% 
+  select(hhid, case_id, cluster_id) %>% 
+  left_join(ea_geos %>% select(cluster_id, rural), by = 'cluster_id') %>% 
+  left_join(ng3_cons_1 %>% select(hhid, totcons, surveyprd, hhsize), by = 'hhid') %>% 
+  left_join(ng3_cons_2 %>% select(hhid, totcons, surveyprd, hhsize), by = 'hhid', suffix = c("_1","_2")) %>% 
+  rename(year_1 = surveyprd_1, year_2 = surveyprd_2) %>% 
+  mutate(hhsize = ifelse(is.na(hhsize_1), hhsize_2, hhsize_1)) %>% 
+  left_join(ng_cpi, by = c("year_1" = 'year', 'rural' = 'rural')) %>% 
+  left_join(ng_cpi, by = c("year_2" = 'year', 'rural' = 'rural'), suffix = c("_1","_2")) %>% 
   mutate(both_avail = ifelse(is.na(totcons_1) + is.na(totcons_2) == 0,1,0)) %>% 
   mutate(totcons_2017 = ifelse(both_avail == 1, (totcons_1 * deflator_2017_1 + totcons_2 * deflator_2017_2)/2, 
                           ifelse(is.na(totcons_1), totcons_2 * deflator_2017_2, totcons_1 * deflator_2017_1))) %>% 
   mutate(cons_pc_lcu_2017 = totcons_2017/365) %>% 
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (112.098327636719)) %>% # converts the LCU into 2017 USD.
-  mutate(rural = ifelse(rururb == 0,1,0),
-         adulteq = NA) %>% 
+  mutate(adulteq = NA) %>% 
   rename(hh_size = hhsize) %>% 
   select(case_id, rural, hh_size, adulteq, cons_pc_lcu_2017,cons_pc_usd_2017)
 
 ng4_cons <- ng4_cons %>% 
   left_join(ng4_geos %>% select(case_id, hhid), by = 'hhid') %>% 
-  mutate(year = 2018, urban = ifelse(sector == 1,1,0)) %>% 
-  left_join(ng_cpi, by = c('year' = 'year', 'urban' = 'urban')) %>% 
+  mutate(year = 2018, rural = ifelse(sector == 2,1,0)) %>% 
+  left_join(ng_cpi, by = c('year' = 'year', 'rural' = 'rural')) %>% 
   mutate(yearly_cons_pc_lcu_2017 = totcons_pc * deflator_2017)  %>%
   mutate(cons_pc_lcu_2017 = yearly_cons_pc_lcu_2017 / 365) %>% 
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (112.098327636719)) %>% # converts the LCU into 2017 USD.
-  mutate(rural = ifelse(sector == 2,1,0),
-         adulteq = NA) %>% 
+  mutate(adulteq = NA) %>% 
   rename(hh_size = hhsize) %>% 
   select(case_id, rural, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
@@ -417,6 +426,8 @@ ng4 <- ng4_geos %>%
 # and to assess whether the sample is biased due to attrition
 # households that moved to a different EA are indicated by a 0 in the EA id
 # thus the case_id changes as it also includes the EA id.
+
+ea_geos %<>% select(-rural) 
 
 long_panel <- rbind.data.frame(
   ng1 %>% filter(case_id %in% long_panel_ids$case_id),
