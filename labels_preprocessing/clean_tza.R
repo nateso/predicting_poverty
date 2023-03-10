@@ -78,6 +78,7 @@ w3_ids <- tz3_a %>% filter(hh_a10 == 1) %>% filter(hh_a11 != 3) %>%  # remove sp
 w4_ids <- tz4_a %>% filter(hh_a10 == 1) %>% filter(hh_a11 %in% c(1,2)) %>% # no geovars at household level... thus restrict to households in same location as before.
   rename(y3_hhid = hh_a09) %>% 
   filter(y3_hhid %in% w3_ids$y3_hhid) %>% 
+  filter(y4_hhid %in% tz4_cons$y4_hhid) %>%
   left_join(w3_ids, by = 'y3_hhid') %>% 
   distinct(y1_hhid, .keep_all = T) %>% 
   select(y1_hhid,y2_hhid,y3_hhid,y4_hhid)
