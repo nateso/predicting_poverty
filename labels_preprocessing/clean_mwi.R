@@ -29,16 +29,17 @@ mw2_geos = read_dta("../../Data/lsms/Malawi/MWI_2010_2013/HouseholdGeovariables_
 #...............................................................................
 
 mw1_geos %<>% 
-  select(case_id, ea_id, lat_modified, lon_modified) %>%
+  select(case_id, ea_id, lat_modified, lon_modified, reside) %>%
   left_join(mw1_a %>% select(case_id, HHID), by = 'case_id') %>% 
-  rename(lat_1 = lat_modified , lon_1 = lon_modified)
+  rename(lat_1 = lat_modified , lon_1 = lon_modified) %>% 
+  mutate(rural = ifelse(reside == 2,1,0)) %>% select(-reside)
 
 mw2_geos %<>% 
   select(y2_hhid, LAT_DD_MOD, LON_DD_MOD) %>%
   rename(lat_2 = LAT_DD_MOD, lon_2 = LON_DD_MOD)
 
 ea_geos <- mw1_geos %>% 
-  select(ea_id, lat_1, lon_1) %>% 
+  select(ea_id, lat_1, lon_1, rural) %>% 
   distinct() %>% 
   rename(lat = lat_1, lon = lon_1)
 
@@ -141,22 +142,20 @@ mwi_cpi %<>%
   select(year, deflator_2017)
 
 mw1_cons %<>% 
-  select(case_id, hhsize, adulteq, rexpagg, pcrexpagg, urban) %>% 
+  select(case_id, hhsize, adulteq, rexpagg, pcrexpagg) %>% 
   mutate(cons_pc_lcu_2017 = (pcrexpagg * 2.0481145)/365)  %>%  # 2.0481145 is the value to inflate 2013 LCU to 2017 LCU.
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (241.930526733398)) %>% 
   mutate(wave = 1, year = 2010, country = 'mwi') %>% 
   rename(hh_size = hhsize) %>% 
-  mutate(rural = ifelse(urban == 2,1,0)) %>% 
-  select(country,year,wave, rural, case_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  select(country,year,wave, case_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
 mw2_cons %<>% 
-  select(case_id, y2_hhid, hhsize, adulteq, rexpagg, pcrexpagg,urban) %>% 
+  select(case_id, y2_hhid, hhsize, adulteq, rexpagg, pcrexpagg) %>% 
   mutate(cons_pc_lcu_2017 = (pcrexpagg * 2.0481145)/365) %>%  # 2.0481145 is the value to inflate 2013 LCU to 2017 LCU.
   mutate(cons_pc_usd_2017 = cons_pc_lcu_2017 / (241.930526733398)) %>% 
   mutate(wave = 2, year = 2013, country = 'mwi') %>% 
   rename(hh_size = hhsize) %>% 
-  mutate(rural = ifelse(urban == 2,1,0)) %>% 
-  select(country, year, wave, rural, y2_hhid, case_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
+  select(country, year, wave, y2_hhid, case_id, hh_size, adulteq, cons_pc_lcu_2017, cons_pc_usd_2017)
 
 #...............................................................................
 ##### merge data and split into attr and main data #####
@@ -180,7 +179,8 @@ mw_short_panel <- rbind.data.frame(
 )
 
 mw_short_panel %<>%  
-  left_join(short_main_ids %>% select(case_id, ea_id, lat, lon), by = 'case_id') %>%
+  left_join(short_main_ids %>% select(case_id, ea_id), by = 'case_id') %>%
+  left_join(ea_geos %>% select(ea_id, rural, lat, lon), by = 'ea_id') %>% 
   mutate(case_id = paste0('mwi_', case_id),
          cluster_id = paste0('mwi_', ea_id)) %>% 
   select(country, start_month, start_year, end_month, end_year, wave,
@@ -191,7 +191,8 @@ mw_short_panel %<>%
   mutate_all(as.vector)
 
 mw_short_panel_attr <- mw1 %>% 
-  left_join(short_main_ids %>% select(case_id, ea_id, lat, lon), by = 'case_id') %>%
+  left_join(short_main_ids %>% select(case_id, ea_id), by = 'case_id') %>%
+  left_join(ea_geos %>% select(ea_id, rural, lat, lon), by = 'ea_id') %>%   
   mutate(case_id = paste0('mwi_', case_id),
          cluster_id = paste0('mwi_', ea_id)) %>% 
   filter((case_id %in% mw_short_panel$case_id) == F) %>% 
