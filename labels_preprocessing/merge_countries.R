@@ -96,7 +96,7 @@ poverty_plot <- ggplot(plot_dat) +
   aes(x = start_year, y = mean_inc, color = ctry_series) +
   geom_line() +
   scale_x_continuous(breaks = c(2008:2021)) +
-  xlab("Year") + ylab("Average daily per capita consumption in 2017 int. $") +
+  xlab("Year") + ylab("Average daily per capita income in 2017 int. $") +
   theme_bw()
 
 poverty_plot
@@ -137,8 +137,6 @@ dat %<>%
 #*******************************************************************************
 #### Check correlation of Asset indices and consumption data ####
 #*******************************************************************************
-cor(dat$asset_index_nate, dat$asset_index_yeh)
-
 cor(dat$asset_index_yeh, dat$cons_pc_usd_2017)
 cor(dat$asset_index_yeh, log(dat$cons_pc_usd_2017))
 
@@ -153,102 +151,27 @@ cor(dat$asset_index_nate, log(dat$cons_pc_usd_2017))
 # remove those clusters with less than 3? hosueholds (??) --> estimate will be too noisy.
 
 # get the number of households per cluster
+n_households = dat %>% 
+  filter(wave == 1) %>% 
+  group_by(country, cluster_id) %>% 
+  summarise(count = n())
+
+
 cl_dat <- dat %>% 
-  select(country, start_month, start_year, end_month, end_year, wave, series, cluster_id,
-         rural, lat, lon, cons_pc_usd_2017, cons_pc_lcu_2017, asset_index_yeh, asset_index_nate) %>% 
-  group_by(country, start_month, start_year, end_month, end_year, wave, series, cluster_id,
+  select(country, start_month, start_year, end_month, end_year, wave, cluster_id,
+         rural, lat, lon, cons_pc_usd_2017, asset_index_yeh, asset_index_nate) %>% 
+  group_by(country, start_month, start_year, end_month, end_year, wave, cluster_id,
            rural, lat, lon) %>% 
-  summarise(mean_pc_cons_usd_2017 = mean(cons_pc_usd_2017),
-            median_pc_cons_usd_2017 = median(cons_pc_usd_2017),
-            mean_pc_cons_lcu_2017 = mean(cons_pc_lcu_2017),
-            median_pc_cons_lcu_2017 = median(cons_pc_lcu_2017),
-            mean_asset_index_nate = mean(asset_index_nate),
-            median_asset_index_nate = median(asset_index_nate),
-            mean_asset_index_yeh = mean(asset_index_yeh),
-            median_asset_index_yeh = median(asset_index_yeh),
-            n_households = n()) %>% 
-  mutate(extreme_poor = ifelse(median_pc_cons_usd_2017 < 2.15,1,0)) %>% 
-  ungroup()
+  summarise(mean_pc_cons_2017_usd = mean(cons_pc_usd_2017),
+            median_pc_cons_2017_usd = median(cons_pc_usd_2017))
 
 
 #*******************************************************************************
-#### Descriptive stats on the cluster dataset ####
+#### Save the final dataset ####
 #*******************************************************************************
 
-vnames <- names(cl_dat)[grepl("median|mean|n_|extreme_poor",names(cl_dat))]
-
-for(var in vnames){
-  print("........................")
-  print(paste('Variable:',var))
-  print(summary(cl_dat[[var]]))
-  print("........................")
-}
-
-
-cor(cl_dat$mean_pc_cons_usd_2017, cl_dat$mean_asset_index_nate)
-cor(cl_dat$mean_pc_cons_usd_2017, cl_dat$mean_asset_index_yeh)
-
-cor(log(cl_dat$mean_pc_cons_usd_2017), cl_dat$mean_asset_index_nate)
-cor(log(cl_dat$mean_pc_cons_usd_2017), cl_dat$mean_asset_index_yeh)
-
-cor(cl_dat$median_pc_cons_usd_2017, cl_dat$mean_asset_index_nate)
-cor(cl_dat$median_pc_cons_usd_2017, cl_dat$mean_asset_index_yeh)
-
-cor(log(cl_dat$median_pc_cons_usd_2017), cl_dat$mean_asset_index_nate)
-cor(log(cl_dat$median_pc_cons_usd_2017), cl_dat$mean_asset_index_yeh)
-
-
-
-#*******************************************************************************
-#### Final Sample table ####
-#*******************************************************************************
-
-cl_dat$country_series <- paste(cl_dat$country, cl_dat$series, sep = "_") 
-tab <- table(cl_dat$start_year, cl_dat$country_series)
-
-kable(tab,format = 'latex')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+write.csv(dat, "../../Data/processed/labels_hh.csv", row.names = F)
+write.csv(cl_dat,"../../Data/processed/labels_cluster.csv",row.names = F)
 
 
 
