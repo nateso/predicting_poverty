@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 def load_img(file_path):
     # extract the file name
-    file_name = file_path.split("/")[-1]
+    file_name = file_path.split("/")[-1].split('.')[0]
 
     # load the image
     img = import_tif_file(file_path)
@@ -25,7 +25,8 @@ def load_img(file_path):
     # if it is a RS image, fix the WSF image
     is_rs = 'RS' in file_name
     if is_rs:
-        img = fix_wsf(img, info)
+        start_year = int(file_name[-4:])
+        img = fix_wsf(img, start_year)
 
     return img
 
@@ -88,10 +89,10 @@ def count_na_pixels(img):
     return na_pixels
 
 
-def fix_wsf(img, info):
+def fix_wsf(img, start_year):
     img[:, :, 5] = np.nan_to_num(img[:, :, 5], nan=0)
-    is_pop = (img[:, :, 5] < (info.start_year + 1)) & (img[:, :, 5] > 1)
-    not_yet_pop = img[:, :, 5] > info.start_year
+    is_pop = (img[:, :, 5] < (start_year + 1)) & (img[:, :, 5] > 1)
+    not_yet_pop = img[:, :, 5] > start_year
     img[:, :, 5][is_pop] = 1
     img[:, :, 5][not_yet_pop] = 0
     return img
@@ -213,7 +214,7 @@ def print_band_stats(band_stats, band_name_dict):
 #***********************************************************************************************************************
 
 def plot_most_affected_imgs(lsms_df, band_stats, band_nr, by = 'n_na', lower = 0, upper = 100):
-  most_affected = band_stats[band_nr].sort_values(by = by, ascending = False).iloc[lower:upper].reset_index(drop = True).copy()
+  most_affected = band_stats[band_nr].sort_values(by = by, ascending = False).reset_index(drop = True).iloc[lower:upper].copy()
   most_affected = pd.merge(most_affected, lsms_df[['unique_id','file_path']], on = 'unique_id')
   most_affected_ids = list(most_affected.unique_id)
   most_affected_Na_count = list(most_affected.n_na)
@@ -222,6 +223,26 @@ def plot_most_affected_imgs(lsms_df, band_stats, band_nr, by = 'n_na', lower = 0
   fig, axs = plt.subplots(nrows=10, ncols=10, figsize=(50, 50))
   for i, ax in enumerate(axs.flat):
     img = load_img(most_affected_paths[i])
-    ax.imshow(img[:,:,2], cmap = 'gray')
+    ax.imshow(img[:,:,band_nr], cmap = 'gray')
     ax.set_title(f'{most_affected_ids[i]}-count:{most_affected_Na_count[i]}')
   plt.show()
+
+
+def plot_ls_img(img, title = None):
+      '''
+      plots all 6 bands of a processed Landsat image
+      '''
+      # the first three channels are the RGB image
+      fig, ax = plt.subplots(nrows = 1, ncols = 4, figsize = (20,5))
+      ax[0].imshow(img[:,:,:3])
+      ax[0].set_title('RGB')
+      ax[1].imshow(img[:,:,3])
+      ax[1].set_title("NIR")
+      ax[2].imshow(img[:,:,4])
+      ax[2].set_title("SWIR1")
+      ax[3].imshow(img[:,:,5])
+      ax[3].set_title("TEMP1")
+      for i in range(4):
+        ax[i].axis('off')
+      fig.suptitle(title)
+      plt.show()
