@@ -1,5 +1,7 @@
 import numpy as np
+import pandas as pd
 import rasterio
+import matplotlib.pyplot as plt
 
 #***********************************************************************************************************************
 # Functions to to load satellite images and basic processing
@@ -172,3 +174,54 @@ def aggregate_band(band_stats_band, flagged_ids):
 def calc_std(sm, ss, n):
     vr = ss / n - (sm / n) ** 2
     return np.sqrt(vr)
+
+#***********************************************************************************************************************
+# Functions to print statistics on the images
+#***********************************************************************************************************************
+
+def print_summary(summary_band_stats, band_name_dict):
+    for band, stats in summary_band_stats.items():
+      print(f"{band}:\t min:{stats['min']:.5f}\t max:{stats['max']:.5f}\t mean:{stats['mean']:.5f}\t std:{stats['std']:.5f}\t{band_name_dict[band]}")
+
+def print_min_max(img):
+    n_channels = img.shape[2]
+    for i in range(n_channels):
+        flat_img = img[:,:,i].flatten()
+        img_min = min(flat_img)
+        img_max = max(flat_img)
+        print(f"\n Channel {i}")
+        print(img_min)
+        print(img_max)
+
+def print_band_stats(band_stats, band_name_dict):
+  for band in band_stats.keys():
+    aux = band_stats[band]['n_na']
+    aux_neg = band_stats[band]['n_negative']
+    aux_pos = band_stats[band]['n_over_1']
+    print(f"\nBand {band_name_dict[band]} sum of NA pixels: {sum(aux)}")
+    print(f"Band {band_name_dict[band]} number of images with NA pixels: {np.sum(aux > 0)}")
+    print(f"Band {band_name_dict[band]} mean number of NA pixels: {np.mean(aux)}")
+    print(f"Band {band_name_dict[band]} number of images with negative pixels: {np.sum(aux_neg > 0)}")
+    print(f"Band {band_name_dict[band]} number of negative pixels: {np.sum(aux_neg)}")
+    print(f"Band {band_name_dict[band]} mean number of negative pixels: {np.mean(aux_neg)}")
+    print(f"Band {band_name_dict[band]} median number of negative pixels: {np.median(aux_neg)}")
+    print(f"Band {band_name_dict[band]} max number of negative pixels: {np.max(aux_neg)}")
+    print(f"Band {band_name_dict[band]} number of images with pixels > 1: {np.sum(aux_pos > 0)}")
+
+#***********************************************************************************************************************
+# Functions to plot statistics on the images
+#***********************************************************************************************************************
+
+def plot_most_affected_imgs(lsms_df, band_stats, band_nr, by = 'n_na', lower = 0, upper = 100):
+  most_affected = band_stats[band_nr].sort_values(by = by, ascending = False).iloc[lower:upper].reset_index(drop = True).copy()
+  most_affected = pd.merge(most_affected, lsms_df[['unique_id','file_path']], on = 'unique_id')
+  most_affected_ids = list(most_affected.unique_id)
+  most_affected_Na_count = list(most_affected.n_na)
+  most_affected_paths = list(most_affected.file_path)
+
+  fig, axs = plt.subplots(nrows=10, ncols=10, figsize=(50, 50))
+  for i, ax in enumerate(axs.flat):
+    img = load_img(most_affected_paths[i])
+    ax.imshow(img[:,:,2], cmap = 'gray')
+    ax.set_title(f'{most_affected_ids[i]}-count:{most_affected_Na_count[i]}')
+  plt.show()
