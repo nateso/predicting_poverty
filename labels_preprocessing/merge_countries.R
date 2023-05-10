@@ -169,6 +169,17 @@ cl_dat <- dat %>%
   mutate(extreme_poor = ifelse(median_pc_cons_usd_2017 < 2.15,1,0)) %>% 
   ungroup()
 
+#*******************************************************************************
+#### Add a start and end time stamp and unique id####
+#*******************************************************************************
+
+cl_dat %<>% 
+  mutate(start_day = 1, end_day = 30) %>% 
+  mutate(start_ts = as.Date(paste(start_year, start_month, start_day, sep = "-"))) %>% 
+  mutate(end_ts = start_ts + 365) %>% 
+  mutate(unique_id = paste(cluster_id,start_year,sep = '_')) %>%
+  relocate(country, start_day, start_month, start_year, end_day, end_month, end_year, 
+           start_ts, end_ts, wave, series, cluster_id, rural, unique_id)
 
 #*******************************************************************************
 #### Descriptive stats on the cluster dataset ####
