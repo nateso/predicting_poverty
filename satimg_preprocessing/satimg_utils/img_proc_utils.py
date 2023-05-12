@@ -55,11 +55,10 @@ def reorder_rgb(img):
     return img
 
 
-# centers and crops the image to a 255 x 255 pixel image
-def center_crop_img(img, img_width=255, img_height=255):
+# centers and crops the image to a 224 x 224 pixel image
+def center_crop_img(img, img_width=224, img_height=224):
     act_h = img.shape[0]
     act_w = img.shape[1]
-    n_channles = img.shape[2]
 
     h_diff = act_h - img_height
     w_diff = act_w - img_width
