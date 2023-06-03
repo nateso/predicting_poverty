@@ -27,14 +27,14 @@ def load_img(file_path):
     if is_rs:
         start_year = int(file_name[-4:])
         img = fix_wsf(img, start_year)
-        img = replace_pixel_values(img[:,:,0], -999, -0.01) # in nightlights images replace water with -0.1
-        img = replace_pixel_values(img[:,:,1], -999, -1.01) # NDVI mean
-        img = replace_pixel_values(img[:,:,2], -999, -1.01) # NDVI median
-        img = replace_pixel_values(img[:,:,3], -999, -1.01) # NDVi cropland mean
-        img = replace_pixel_values(img[:,:,3], -888, -1.02) # NDVI cropland mean no cropland mask values
-        img = replace_pixel_values(img[:,:,4], -999, -1.01) # NDVi cropland median water
-        img = replace_pixel_values(img[:,:,4], -888, -1.02) # NDVi cropland median no cropland
-        img = replace_pixel_values(img[:,:,5], -999, -0.01) # WSF water
+        img[:,:,0] = replace_pixel_values(img[:,:,0], -999, -0.01) # in nightlights images replace water with -0.1
+        img[:,:,1] = replace_pixel_values(img[:,:,1], -999, -1.01) # NDVI mean
+        img[:,:,2] = replace_pixel_values(img[:,:,2], -999, -1.01) # NDVI median
+        img[:,:,3] = replace_pixel_values(img[:,:,3], -999, -1.01) # NDVi cropland mean
+        img[:,:,3] = replace_pixel_values(img[:,:,3], -888, -1.02) # NDVI cropland mean no cropland mask values
+        img[:,:,4] = replace_pixel_values(img[:,:,4], -999, -1.01) # NDVi cropland median water
+        img[:,:,4] = replace_pixel_values(img[:,:,4], -888, -1.02) # NDVi cropland median no cropland
+        img[:,:,5] = replace_pixel_values(img[:,:,5], -999, -0.01) # WSF water
 
     return img
 
