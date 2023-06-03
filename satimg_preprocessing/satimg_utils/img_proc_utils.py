@@ -27,9 +27,16 @@ def load_img(file_path):
     if is_rs:
         start_year = int(file_name[-4:])
         img = fix_wsf(img, start_year)
+        img = replace_pixel_values(img[:,:,0], -999, -0.01) # in nightlights images replace water with -0.1
+        img = replace_pixel_values(img[:,:,1], -999, -1.01) # NDVI mean
+        img = replace_pixel_values(img[:,:,2], -999, -1.01) # NDVI median
+        img = replace_pixel_values(img[:,:,3], -999, -1.01) # NDVi cropland mean
+        img = replace_pixel_values(img[:,:,3], -888, -1.02) # NDVI cropland mean no cropland mask values
+        img = replace_pixel_values(img[:,:,4], -999, -1.01) # NDVi cropland median water
+        img = replace_pixel_values(img[:,:,4], -888, -1.02) # NDVi cropland median no cropland
+        img = replace_pixel_values(img[:,:,5], -999, -0.01) # WSF water
 
     return img
-
 
 def import_tif_file(geotiff_file_path, is_ls=False):
     with rasterio.open(geotiff_file_path) as src:
@@ -95,6 +102,10 @@ def fix_wsf(img, start_year):
     img[:, :, 5][is_pop] = 1
     img[:, :, 5][not_yet_pop] = 0
     return img
+
+def replace_pixel_values(img_channel, old_px_value, new_px_value):
+    img_channel[img_channel == old_px_value] = new_px_value
+    return img_channel
 
 #***********************************************************************************************************************
 # Functions to compute statistics on the images
