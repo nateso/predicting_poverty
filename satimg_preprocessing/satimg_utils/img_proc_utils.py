@@ -23,10 +23,10 @@ def load_img(file_path):
         img = reorder_rgb(img)
 
     # if it is a RS image, fix the WSF image
-    is_rs = 'RS' in file_name
+    is_rs = ('RS' in file_name) and ('RS_v2_' not in file_name)
     if is_rs:
         start_year = int(file_name[-4:])
-        img = fix_wsf(img, start_year)
+        img = fix_wsf(img, start_year, wsf_idx = 5)
         img[:,:,0] = replace_pixel_values(img[:,:,0], -999, -0.01) # in nightlights images replace water with -0.1
         img[:,:,1] = replace_pixel_values(img[:,:,1], -999, -1.01) # NDVI mean
         img[:,:,2] = replace_pixel_values(img[:,:,2], -999, -1.01) # NDVI median
@@ -35,6 +35,10 @@ def load_img(file_path):
         img[:,:,4] = replace_pixel_values(img[:,:,4], -999, -1.01) # NDVi cropland median water
         img[:,:,4] = replace_pixel_values(img[:,:,4], -888, -1.02) # NDVi cropland median no cropland
         img[:,:,5] = replace_pixel_values(img[:,:,5], -999, -0.01) # WSF water
+    is_rs_v2 = 'RS_v2_' in file_name
+    if is_rs_v2:
+        start_year = int(file_name[-4:])
+        img = fix_wsf(img, start_year, wsf_idx = 2)
 
     return img
 
@@ -95,12 +99,12 @@ def count_na_pixels(img):
     return na_pixels
 
 
-def fix_wsf(img, start_year):
-    img[:, :, 5] = np.nan_to_num(img[:, :, 5], nan=0)
-    is_pop = (img[:, :, 5] < (start_year + 1)) & (img[:, :, 5] > 1)
-    not_yet_pop = img[:, :, 5] > start_year
-    img[:, :, 5][is_pop] = 1
-    img[:, :, 5][not_yet_pop] = 0
+def fix_wsf(img, start_year, wsf_idx = 5):
+    img[:, :, wsf_idx] = np.nan_to_num(img[:, :, wsf_idx], nan=0)
+    is_pop = (img[:, :, wsf_idx] < (start_year + 1)) & (img[:, :, wsf_idx] > 1)
+    not_yet_pop = img[:, :, wsf_idx] > start_year
+    img[:, :, wsf_idx][is_pop] = 1
+    img[:, :, wsf_idx][not_yet_pop] = 0
     return img
 
 def replace_pixel_values(img_channel, old_px_value, new_px_value):
