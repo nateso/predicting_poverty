@@ -8,14 +8,45 @@ import matplotlib.pyplot as plt
 #***********************************************************************************************************************
 
 def load_img(file_path):
-    # extract the file name
-    file_name = file_path.split("/")[-1].split('.')[0]
-
     # load the image
     img = import_tif_file(file_path)
 
     # center crop the image
-    img = center_crop_img(img)
+    return center_crop_img(img)
+
+def preprocess_img(img, data_type, start_year = None):
+    if data_type == 'LS':
+        return preprocess_LS(img)
+    elif data_type == 'RS':
+        if start_year is None:
+            raise ValueError("Need to provide a start year for data_type = RS")
+        return preprocess_RS(img, start_year)
+    elif data_type == 'RS_v2':
+        if start_year is None:
+            raise ValueError("Need to provide a start year for data_type = RS_v2")
+        return preprocess_RS_v2(img, start_year)
+
+def preprocess_LS(img):
+    return reorder_rgb(img)
+
+def preprocess_RS(img, start_year):
+    img = fix_wsf(img, start_year, wsf_idx=5)
+    img[:, :, 0] = replace_pixel_values(img[:, :, 0], -999, -0.01)  # in nightlights images replace water with -0.1
+    img[:, :, 1] = replace_pixel_values(img[:, :, 1], -999, -1.01)  # NDVI mean
+    img[:, :, 2] = replace_pixel_values(img[:, :, 2], -999, -1.01)  # NDVI median
+    img[:, :, 3] = replace_pixel_values(img[:, :, 3], -999, -1.01)  # NDVi cropland mean
+    img[:, :, 3] = replace_pixel_values(img[:, :, 3], -888, -1.02)  # NDVI cropland mean no cropland mask values
+    img[:, :, 4] = replace_pixel_values(img[:, :, 4], -999, -1.01)  # NDVi cropland median water
+    img[:, :, 4] = replace_pixel_values(img[:, :, 4], -888, -1.02)  # NDVi cropland median no cropland
+    img[:, :, 5] = replace_pixel_values(img[:, :, 5], -999, -0.01)  # WSF water
+    return img
+
+def preprocess_RS_v2(img, start_year):
+    return fix_wsf(img, start_year, wsf_idx=2)
+
+def load_img_old(file_path):
+    # extract the file name
+    file_name = file_path.split("/")[-1].split('.')[0]
 
     # if it is a Landsat Image reorder the first three channels
     is_ls = 'LS' in file_name
