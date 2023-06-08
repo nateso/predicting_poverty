@@ -193,6 +193,59 @@ def aggregate_band(band_stats_band, flagged_ids):
 def calc_std(sm, ss, n):
     vr = ss / n - (sm / n) ** 2
     return np.sqrt(vr)
+# ***********************************************************************************************************************
+# Functions to process the LS images
+# ***********************************************************************************************************************
+
+
+def normalise_img_min_max(img, mins, maxs):
+    # function to rescale the image to a 0 - 1 range
+    n_bands = img.shape[2]
+    norm_img = []
+    for band_idx in range(n_bands):
+        norm_img.append((img[:, :, band_idx] - mins[band_idx]) / (maxs[band_idx] - mins[band_idx]))
+    norm_img = np.array(norm_img)
+    norm_img = norm_img.transpose(1, 2, 0)
+    return norm_img
+
+
+def standardise_img(img, means, stds):
+    # function to standard normalise the image
+    n_bands = img.shape[2]
+    norm_img = []
+    for band_idx in range(n_bands):
+        norm_img.append((img[:, :, band_idx] - means[band_idx]) / stds[band_idx])
+    norm_img = np.array(norm_img)
+    norm_img = norm_img.transpose(1, 2, 0)
+    return norm_img
+
+
+def impute_pixels(img, band_means):
+    # sets the pixel values to the overall mean of the image in order to not NAs in the image
+    n_bands = img.shape[2]
+    imp_img = []
+    for band_idx in range(n_bands):
+        img_band = img[:, :, band_idx].copy()
+        na_mask = np.isnan(img_band)
+        img_band[na_mask] = band_means[band_idx]
+        imp_img.append(img_band)
+    imp_img = np.array(imp_img).transpose(1, 2, 0)
+    return imp_img
+
+
+def count_bad_pixels(img):
+    # a bad pixel is a pixel that is NA, or greater than 1 (only for RGB channels)
+    n_bands = img.shape[2]
+    bad_pixel_count = 0
+    for band_idx in range(n_bands):
+        if not band_idx == 5:
+            na_count = np.sum(np.isnan(img[:, :, band_idx].flatten()))
+            if band_idx in [0, 1, 2]:
+                over_1_count = np.sum(img[:, :, band_idx].flatten() > 1)
+                bad_pixel_count += na_count + over_1_count
+            else:
+                bad_pixel_count += na_count
+    return bad_pixel_count
 
 
 # ***********************************************************************************************************************
