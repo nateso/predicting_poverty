@@ -113,11 +113,11 @@ def decompose_lc(img, lc_idx, lc_type='esa'):
         lc_counts['mangroves'] = np.sum(lc_band == 95)
         lc_counts['moss'] = np.sum(lc_band == 100)
     if lc_type == 'modis':
-        lc_counts['tree'] = np.sum(lc_band in [1, 2, 3, 4, 5])
+        lc_counts['tree'] = np.sum(lc_band < 6)
         lc_counts['woody_shrubland'] = np.sum(lc_band == 6)
         lc_counts['shrubland'] = np.sum(lc_band == 7)
         lc_counts['grassland'] = np.sum(lc_band == 10)
-        lc_counts['cropland'] = np.sum(lc_band in [12, 14])
+        lc_counts['cropland'] = np.sum((lc_band == 12) | (lc_band == 14))
         lc_counts['built_up'] = np.sum(lc_band == 13)
         lc_counts['barren'] = np.sum(lc_band == 16)
         lc_counts['snow_ice'] = np.sum(lc_band == 15)
