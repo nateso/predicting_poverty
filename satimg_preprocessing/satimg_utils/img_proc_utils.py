@@ -12,21 +12,8 @@ def load_img(file_path):
     # load the image
     img = import_tif_file(file_path)
 
-    # center crop the image
+    # center crop the image and return
     return center_crop_img(img)
-
-
-def preprocess_img(img, data_type, start_year=None):
-    if data_type == 'LS':
-        return reorder_rgb(img)
-    elif data_type == 'RS':
-        if start_year is None:
-            raise ValueError("Need to provide a start year for data_type = RS")
-        return fix_wsf(img, start_year, wsf_idx=5)
-    elif data_type == 'RS_v2':
-        if start_year is None:
-            raise ValueError("Need to provide a start year for data_type = RS_v2")
-        return fix_wsf(img, start_year, wsf_idx=2)
 
 
 def import_tif_file(geotiff_file_path, is_ls=False):
@@ -35,22 +22,6 @@ def import_tif_file(geotiff_file_path, is_ls=False):
         src_img = src.read()
     img = src_img.transpose(1, 2, 0)  # rearrange the dimensions of the np array
     return img
-
-
-def reorder_rgb(img):
-    '''
-    The order of the channels in GEE is Blue, Green, Red
-    Reorder the imgage to RGB.
-    '''
-    n_channels = img.shape[2]
-    rgb = np.stack([img[:, :, 2], img[:, :, 1], img[:, :, 0]], axis=2)
-    if n_channels > 3:
-        oth = img[:, :, 3:]
-        img = np.concatenate((rgb, oth), axis=2)
-    else:
-        img = rgb
-    return img
-
 
 # centers and crops the image to a 224 x 224 pixel image
 def center_crop_img(img, img_width=224, img_height=224):
@@ -72,17 +43,32 @@ def center_crop_img(img, img_width=224, img_height=224):
     return cropped_img
 
 
-def count_na_pixels(img):
+def preprocess_img(img, data_type, start_year=None):
+    if data_type == 'LS':
+        return reorder_rgb(img)
+    elif data_type == 'RS':
+        if start_year is None:
+            raise ValueError("Need to provide a start year for data_type = RS")
+        return fix_wsf(img, start_year, wsf_idx=5)
+    elif data_type == 'RS_v2':
+        if start_year is None:
+            raise ValueError("Need to provide a start year for data_type = RS_v2")
+        return fix_wsf(img, start_year, wsf_idx=2)
+
+
+def reorder_rgb(img):
     '''
-    count the number of NA pixels in each image.
-    Returns a dictionary with the number of NA pixels per image band
+    The order of the channels in GEE is Blue, Green, Red
+    Reorder the imgage to RGB.
     '''
-    n_bands = img.shape[2]
-    na_pixels = {}
-    na_pixels['n_pixels'] = len(img[:, :, 0].flatten())
-    for i in range(n_bands):
-        na_pixels[i] = sum(np.isnan(img[:, :, i].flatten()))
-    return na_pixels
+    n_channels = img.shape[2]
+    rgb = np.stack([img[:, :, 2], img[:, :, 1], img[:, :, 0]], axis=2)
+    if n_channels > 3:
+        oth = img[:, :, 3:]
+        img = np.concatenate((rgb, oth), axis=2)
+    else:
+        img = rgb
+    return img
 
 
 def fix_wsf(img, start_year, wsf_idx):
@@ -177,6 +163,7 @@ def get_basic_band_stats(band):
     basic_stats['n_na'] = np.count_nonzero(np.isnan(band))
     return basic_stats
 
+
 def aggregate_band_stats(band_stats, flagged_ids=[]):
     summary_band_stats = {}
     for band in band_stats.keys():
@@ -202,6 +189,7 @@ def aggregate_band(band_stats_band, flagged_ids):
     res['std'] = calc_std(res['sum'], res['sum_of_squares'], res['N'])
     return res
 
+
 def calc_std(sm, ss, n):
     vr = ss / n - (sm / n) ** 2
     return np.sqrt(vr)
@@ -211,7 +199,7 @@ def calc_std(sm, ss, n):
 # Functions to print statistics on the images
 # ***********************************************************************************************************************
 
-def print_summary(summary_band_stats, band_name_dict):
+def print_band_summary(summary_band_stats, band_name_dict):
     for band, stats in summary_band_stats.items():
         print(
             f"{band}:\t min:{stats['min']:.5f}\t max:{stats['max']:.5f}\t mean:{stats['mean']:.5f}\t std:{stats['std']:.5f}\t{band_name_dict[band]}")
@@ -228,27 +216,28 @@ def print_min_max(img):
         print(img_max)
 
 
-def print_band_stats(band_stats, band_name_dict):
+def print_band_quality(band_stats, band_name_dict, data_type):
     for band in band_stats.keys():
         aux = band_stats[band]['n_na']
-        aux_neg = band_stats[band]['n_negative']
-        aux_pos = band_stats[band]['n_over_1']
         print(f"\nBand {band_name_dict[band]} sum of NA pixels: {sum(aux)}")
         print(f"Band {band_name_dict[band]} number of images with NA pixels: {np.sum(aux > 0)}")
         print(f"Band {band_name_dict[band]} mean number of NA pixels: {np.mean(aux)}")
-        print(f"Band {band_name_dict[band]} number of images with negative pixels: {np.sum(aux_neg > 0)}")
-        print(f"Band {band_name_dict[band]} number of negative pixels: {np.sum(aux_neg)}")
-        print(f"Band {band_name_dict[band]} mean number of negative pixels: {np.mean(aux_neg)}")
-        print(f"Band {band_name_dict[band]} median number of negative pixels: {np.median(aux_neg)}")
-        print(f"Band {band_name_dict[band]} max number of negative pixels: {np.max(aux_neg)}")
-        print(f"Band {band_name_dict[band]} number of images with pixels > 1: {np.sum(aux_pos > 0)}")
+        if data_type == 'LS':
+            aux_neg = band_stats[band]['n_negative']
+            aux_pos = band_stats[band]['n_over_1']
+            print(f"Band {band_name_dict[band]} number of images with negative pixels: {np.sum(aux_neg > 0)}")
+            print(f"Band {band_name_dict[band]} number of negative pixels: {np.sum(aux_neg)}")
+            print(f"Band {band_name_dict[band]} mean number of negative pixels: {np.mean(aux_neg)}")
+            print(f"Band {band_name_dict[band]} median number of negative pixels: {np.median(aux_neg)}")
+            print(f"Band {band_name_dict[band]} max number of negative pixels: {np.max(aux_neg)}")
+            print(f"Band {band_name_dict[band]} number of images with pixels > 1: {np.sum(aux_pos > 0)}")
 
 
 # ***********************************************************************************************************************
 # Functions to plot statistics on the images
 # ***********************************************************************************************************************
 
-def plot_most_affected_imgs(lsms_df, band_stats, band_nr, by='n_na', lower=0, upper=100):
+def plot_most_affected_ls_imgs(lsms_df, band_stats, band_nr, by='n_na', lower=0, upper=100):
     most_affected = band_stats[band_nr].sort_values(by=by, ascending=False).reset_index(drop=True).iloc[
                     lower:upper].copy()
     most_affected = pd.merge(most_affected, lsms_df[['unique_id', 'file_path']], on='unique_id')
@@ -259,6 +248,7 @@ def plot_most_affected_imgs(lsms_df, band_stats, band_nr, by='n_na', lower=0, up
     fig, axs = plt.subplots(nrows=10, ncols=10, figsize=(50, 50))
     for i, ax in enumerate(axs.flat):
         img = load_img(most_affected_paths[i])
+        img = preprocess_img(img, data_type = 'LS')
         ax.imshow(img[:, :, band_nr], cmap='gray')
         ax.set_title(f'{most_affected_ids[i]}-count:{most_affected_Na_count[i]}')
     plt.show()
@@ -316,3 +306,15 @@ def plot_ls_img(img, title=None):
 #         img = fix_wsf(img, start_year, wsf_idx=2)
 #
 #     return img
+
+# def count_na_pixels(img):
+#     '''
+#     count the number of NA pixels in each image.
+#     Returns a dictionary with the number of NA pixels per image band
+#     '''
+#     n_bands = img.shape[2]
+#     na_pixels = {}
+#     na_pixels['n_pixels'] = len(img[:, :, 0].flatten())
+#     for i in range(n_bands):
+#         na_pixels[i] = sum(np.isnan(img[:, :, i].flatten()))
+#     return na_pixels
