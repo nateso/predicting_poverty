@@ -54,7 +54,10 @@ def preprocess_img(img, data_type, start_year=None):
         if start_year is None:
             raise ValueError("Need to provide a start year for data_type = RS_v2")
         return fix_wsf(img, start_year, wsf_idx=2)
-
+    elif data_type == 'WP':
+        # Water is NA -> recode as 0. 
+        img[:,:,0] = np.nan_to_num(img[:, :, 0], nan=0)
+        return img
 
 def reorder_rgb(img):
     '''
