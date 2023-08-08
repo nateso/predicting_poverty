@@ -339,6 +339,9 @@ class RS_Feats:
         scale = img_col.first().projection().nominalScale().getInfo()
         return scale
 
+    def make_roi(self):
+        return self.point.buffer(128 * 30).bounds()
+
     #***************************************************************************
     # Defining the classes
 
@@ -351,7 +354,7 @@ class RS_Feats:
                           .filterBounds(parent.point)\
                           .select('b1')\
                           .mosaic()
-            img = img.where(img.eq(255), 1).unmask(0)
+            #img = img.where(img.eq(255), 1).unmask(0)
             return img
 
     class NL_Harm:

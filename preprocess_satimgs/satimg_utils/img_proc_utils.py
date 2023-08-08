@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import rasterio
+from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 
 
@@ -135,6 +136,35 @@ def decompose_lc(img, lc_idx, lc_type='esa'):
 # ***********************************************************************************************************************
 # Functions to compute statistics on the images
 # ***********************************************************************************************************************
+def extract_image_statistics(id_pth_dict, data_type, id_name):
+    file_extension = list(id_pth_dict.values())[0].split('.')[-1]
+    image_stats = {}
+    ids = []
+    for id, pth in tqdm(id_pth_dict.items()):
+        ids.append(id)
+        # load the image
+        if file_extension == 'npy':
+            img = np.load(pth)
+        elif file_extension == 'tif':
+            img = load_img(pth)
+            if data_type == 'LS':
+                img = reorder_rgb(img)
+
+        # extract the statistics for each band
+        for i in range(img.shape[2]):
+            if i in image_stats.keys():
+                image_stats[i].append(get_basic_band_stats(img[:, :, i]))
+            else:
+                image_stats[i] = [get_basic_band_stats(img[:, :, i])]
+
+    # convert the dictionary values to pandas dataframes
+    for band_key in image_stats.keys():
+        image_stats[band_key] = pd.json_normalize(image_stats[band_key])
+        image_stats[band_key][id_name] = ids
+
+    return image_stats
+
+
 def compute_band_stats(img, data_type):
     n_bands = img.shape[2]
     band_stats = {}
@@ -272,21 +302,13 @@ def print_min_max(img):
         print(img_max)
 
 
-def print_band_quality(band_stats, band_name_dict, data_type):
+def print_band_quality(band_stats, band_name_dict):
     for band in band_stats.keys():
         aux = band_stats[band]['n_na']
         print(f"\nBand {band_name_dict[band]} sum of NA pixels: {sum(aux)}")
         print(f"Band {band_name_dict[band]} number of images with NA pixels: {np.sum(aux > 0)}")
         print(f"Band {band_name_dict[band]} mean number of NA pixels: {np.mean(aux)}")
-        if data_type == 'LS':
-            aux_neg = band_stats[band]['n_negative']
-            aux_pos = band_stats[band]['n_over_1']
-            print(f"Band {band_name_dict[band]} number of images with negative pixels: {np.sum(aux_neg > 0)}")
-            print(f"Band {band_name_dict[band]} number of negative pixels: {np.sum(aux_neg)}")
-            print(f"Band {band_name_dict[band]} mean number of negative pixels: {np.mean(aux_neg)}")
-            print(f"Band {band_name_dict[band]} median number of negative pixels: {np.median(aux_neg)}")
-            print(f"Band {band_name_dict[band]} max number of negative pixels: {np.max(aux_neg)}")
-            print(f"Band {band_name_dict[band]} number of images with pixels > 1: {np.sum(aux_pos > 0)}")
+
 
 
 # ***********************************************************************************************************************
@@ -374,3 +396,21 @@ def plot_ls_img(img, title=None):
 #     for i in range(n_bands):
 #         na_pixels[i] = sum(np.isnan(img[:, :, i].flatten()))
 #     return na_pixels
+
+
+
+# def print_band_quality(band_stats, band_name_dict, data_type):
+#     for band in band_stats.keys():
+#         aux = band_stats[band]['n_na']
+#         print(f"\nBand {band_name_dict[band]} sum of NA pixels: {sum(aux)}")
+#         print(f"Band {band_name_dict[band]} number of images with NA pixels: {np.sum(aux > 0)}")
+#         print(f"Band {band_name_dict[band]} mean number of NA pixels: {np.mean(aux)}")
+#         if data_type == 'LS':
+#             aux_neg = band_stats[band]['n_negative']
+#             aux_pos = band_stats[band]['n_over_1']
+#             print(f"Band {band_name_dict[band]} number of images with negative pixels: {np.sum(aux_neg > 0)}")
+#             print(f"Band {band_name_dict[band]} number of negative pixels: {np.sum(aux_neg)}")
+#             print(f"Band {band_name_dict[band]} mean number of negative pixels: {np.mean(aux_neg)}")
+#             print(f"Band {band_name_dict[band]} median number of negative pixels: {np.median(aux_neg)}")
+#             print(f"Band {band_name_dict[band]} max number of negative pixels: {np.max(aux_neg)}")
+#             print(f"Band {band_name_dict[band]} number of images with pixels > 1: {np.sum(aux_pos > 0)}")

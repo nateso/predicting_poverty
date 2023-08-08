@@ -199,7 +199,7 @@ def export_wsf_images(
     roi = fcPoint.geometry().buffer(128 * 30).bounds()
 
     # get the RS derived datasets
-    rs = RS_Feats(fcPoint.geometry(), start_ts='2011-09-01')  # just use a generic start date, as it won't be used...
+    rs = RS_Feats(fcPoint.geometry(), start_ts='2019-09-01')  # just use a generic start date, as it won't be used...
 
     # wsf
     wsf_img = rs.init_wsf().img
