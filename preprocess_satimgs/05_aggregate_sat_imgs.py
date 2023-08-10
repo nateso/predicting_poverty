@@ -22,49 +22,54 @@ for idx, row in lsms_df.iterrows():
     else:
         cid_uid_dict[cid] = [uid]
 
-#### Start with Landsat images
-data_type = 'LS'
+#*******************************************
+#................ Landsat ..................
+#*******************************************
+# data_type = 'LS'
+#
+# # check whether folder exists and create it if not
+# ls_proc_pth = f"{sat_img_dir}/{data_type}/{data_type}_median_cluster"
+# if not os.path.isdir(ls_proc_pth):
+#     os.makedirs(ls_proc_pth)
+# else:
+#     print(f"Warning: LS_median_cluster Folder already exists. Files might be overwritten.")
+#     if input("Do You Want To Continue? [y/n]") == 'n':
+#         exit("Process aborted.")
+#
+#
+# raw_img_dir = f"{sat_img_dir}/{data_type}/{data_type}_raw"
+#
+# ls_file_names = [f'{data_type}_{i}.tif' for i in lsms_df['unique_id']]
+# ls_file_paths = [
+#     f'{raw_img_dir}/{data_type}_{lsms_df.country[i]}_{lsms_df.series[i]}_{lsms_df.start_year[i]}/{ls_file_names[i]}' for i
+#     in range(len(lsms_df))]
+#
+# # create an id-path dictionary
+# uid_pth_dict = dict(zip(lsms_df['unique_id'], ls_file_paths))
+#
+# # load images aggregate them by cluster and save them
+# print("Processing Landsat images...")
+# for cid, uids in tqdm(cid_uid_dict.items()):
+#     # load all images of a given cluster
+#     imgs = []
+#     for uid in uids:
+#         img_pth = uid_pth_dict[uid]
+#         img = load_img(img_pth)
+#         img = reorder_rgb(img)
+#         img = np.delete(img, 5, axis=2)  # delete band 5 due to a lot of missing values
+#         imgs.append(img)
+#
+#     # take the median over all images for that cluster
+#     imgs = np.array(imgs)
+#     median_img = np.nanmedian(imgs, axis=0)  # ignore nan values
+#     # save the median image for each cluster
+#     new_file_path = f'{sat_img_dir}/{data_type}/LS_median_cluster/{data_type}_{cid}.npy'
+#     np.save(new_file_path, median_img)
 
-# check whether folder exists and create it if not
-ls_proc_pth = f"{sat_img_dir}/{data_type}/{data_type}_median_cluster"
-if not os.path.isdir(ls_proc_pth):
-    os.makedirs(ls_proc_pth)
-else:
-    print(f"Warning: LS_median_cluster Folder already exists. Files might be overwritten.")
-    if input("Do You Want To Continue? [y/n]") == 'n':
-        exit("Process aborted.")
+#*******************************************
+#................ RS_V2 ..................
+#*******************************************
 
-
-raw_img_dir = f"{sat_img_dir}/{data_type}/{data_type}_raw"
-
-ls_file_names = [f'{data_type}_{i}.tif' for i in lsms_df['unique_id']]
-ls_file_paths = [
-    f'{raw_img_dir}/{data_type}_{lsms_df.country[i]}_{lsms_df.series[i]}_{lsms_df.start_year[i]}/{ls_file_names[i]}' for i
-    in range(len(lsms_df))]
-
-# create an id-path dictionary
-uid_pth_dict = dict(zip(lsms_df['unique_id'], ls_file_paths))
-
-# load images aggregate them by cluster and save them
-print("Processing Landsat images...")
-for cid, uids in tqdm(cid_uid_dict.items()):
-    # load all images of a given cluster
-    imgs = []
-    for uid in uids:
-        img_pth = uid_pth_dict[uid]
-        img = load_img(img_pth)
-        img = reorder_rgb(img)
-        img = np.delete(img, 5, axis=2)  # delete band 5 due to a lot of missing values
-        imgs.append(img)
-
-    # take the median over all images for that cluster
-    imgs = np.array(imgs)
-    median_img = np.nanmedian(imgs, axis=0)  # ignore nan values
-    # save the median image for each cluster
-    new_file_path = f'{sat_img_dir}/{data_type}/LS_median_cluster/{data_type}_{cid}.npy'
-    np.save(new_file_path, median_img)
-
-#### Process RS images
 data_type = 'RS_v2'
 raw_img_dir = f"{sat_img_dir}/{data_type}/{data_type}_raw"
 
@@ -95,6 +100,7 @@ uid_pth_dict = dict(zip(lsms_df['unique_id'], rs_file_paths))
 
 # load images aggregate them by cluster and save them
 print("Processing RS images...")
+esa_lc_decomp = []
 for cid, uids in tqdm(cid_uid_dict.items()):
     # load all images of a given cluster
     imgs = []
@@ -123,10 +129,22 @@ for cid, uids in tqdm(cid_uid_dict.items()):
     new_file_path = f'{sat_img_dir}/{data_type}/{data_type}_mean_cluster/{data_type}_{cid}.npy'
     np.save(new_file_path, mean_img)
 
+    # decompose the lc image into its categories
+    esa_decomp_lc = decompose_lc(esa_lc_img, lc_idx = 0, lc_type = 'esa')
+    esa_decomp_lc['cluster_id'] = cid
+    esa_lc_decomp.append(esa_decomp_lc)
+
     # load the WSF image
     wsf_pth = f'{sat_img_dir}/{data_type}/WSF_raw/WSF_{cid}.tif'
     wsf_img = load_img(wsf_pth)
     wsf_img[wsf_img == 255] = 1 # replace the values 255 with 1
+
+    # modify the ESA LC image (categories 70 and 100 do not exist) -- snow_ice and moss
+    # categories wetland (90) and mangroves(95) occur rarely --> merge together tp 70
+    esa_lc_img[(esa_lc_img == 95) | (esa_lc_img == 90)] = 70
+
+    # assgin values between 0 and 1 to the categories (values will range from 0.1, to 0.8
+    esa_lc_img = esa_lc_img / 100
 
     # concatenate the wsf and lc
     wsf_lc_img = np.concatenate((wsf_img, esa_lc_img), axis = 2)
@@ -134,5 +152,9 @@ for cid, uids in tqdm(cid_uid_dict.items()):
     # save the new images
     new_file_path = f'{sat_img_dir}/{data_type}/{data_type}_static_processed/{data_type}_{cid}.npy'
     np.save(new_file_path, wsf_lc_img)
+
+esa_lc_df = pd.DataFrame(esa_lc_decomp)
+esa_lc_df.to_csv(f'{sat_img_dir}/{data_type}/esa_lc_decomp.csv', index = False)
+
 
 
