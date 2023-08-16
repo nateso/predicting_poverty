@@ -151,3 +151,5 @@ def plot_most_affected_rgb(uid_pth_dict, img_stats, lower=0, upper=25):
 
     plt.tight_layout()
     plt.show()
+
+
