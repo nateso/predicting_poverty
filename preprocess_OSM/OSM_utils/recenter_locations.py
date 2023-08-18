@@ -27,7 +27,7 @@ def recenter_data(cluster_gpd, client, fltr, extreme = False):
     print('Recenter locations...')
     # recenter the locations
     for j, cluster_info in tqdm(cluster_gpd.iterrows(), total = len(cluster_gpd)):
-    cluster_id = cluster_info['cluster_id']
+        cluster_id = cluster_info['cluster_id']
 
     nearest_geom, dist = get_nearest_geom(cluster_info, populated_areas, extreme)
     new_lat, new_lon = recenter_location(cluster_info, nearest_geom, dist)
