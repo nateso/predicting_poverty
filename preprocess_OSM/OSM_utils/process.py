@@ -18,7 +18,6 @@ def recenter_data(cluster_gpd, client, fltr, extreme=False):
 
     # run the query
     bpolys = gpd.GeoDataFrame(geometry=[roi_multip], crs='EPSG:4326')
-    fltr = fltr
     populated_areas = download_OSM_data(bpolys, fltr, client)
 
     populated_areas = preprocess_response(populated_areas)
@@ -104,7 +103,7 @@ def preprocess_response(response_df):
 
 def download_OSM_data(bpolys, fltr, client, tags=False):
     pre = datetime.now()
-    tm = "2023-03-01/2023-03-26/P1M"
+    tm = "2023-07-01/2023-07-31/P1M"
     if tags:
         response = client.elements.geometry.post(bpolys=bpolys,
                                                  time=tm,
