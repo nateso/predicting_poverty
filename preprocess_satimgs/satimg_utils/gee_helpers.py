@@ -157,17 +157,18 @@ def count_na_pixels(image, roi, scale):
     return num_na_pixels.getInfo()
 
 def check_downloaded_files(prefix = 'RS', source_dir = "../"):
-  folders = os.listdir(source_dir)
+    source_dir = source_dir
+    folders = os.listdir(source_dir)
 
-  mask = np.array([folder.startswith(prefix) for folder in folders])
-  folders = np.array(folders)[mask]
+    mask = np.array([folder.startswith(prefix) for folder in folders])
+    folders = np.array(folders)[mask]
 
-  folder_paths = [source_dir + folder for folder in folders]
-  downloaded_files = []
-  for i in range(len(folder_paths)):
-    downloaded_files += os.listdir(folder_paths[i])
+    folder_paths = [source_dir + folder for folder in folders]
+    downloaded_files = []
+    for i in range(len(folder_paths)):
+        downloaded_files += os.listdir(folder_paths[i])
 
-  return downloaded_files
+    return downloaded_files
 
 def apply_mask(img, mask, fill_val, invert = False):
     if invert:
