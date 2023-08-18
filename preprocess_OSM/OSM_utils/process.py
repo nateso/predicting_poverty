@@ -103,7 +103,7 @@ def preprocess_response(response_df):
 
 def download_OSM_data(bpolys, fltr, client, tags=False):
     pre = datetime.now()
-    tm = "2023-07-01/2023-07-31/P1M"
+    tm = "2023-03-01/2023-03-26/P1M"
     if tags:
         response = client.elements.geometry.post(bpolys=bpolys,
                                                  time=tm,
