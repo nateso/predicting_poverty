@@ -253,7 +253,77 @@ def plot_lc_modis(unique_id, fname = None, title = None):
 #******************************************************************************
 #........ Functions to plot dynamic RS images ........
 #******************************************************************************
+def plot_mean_nl(cluster_id, fname=None):
+    data_type = 'RS_v2'
+    sat_img_dir = "../../Data/satellite_imgs"
+    img_dir = f"{sat_img_dir}/RS_v2/{data_type}_mean_cluster"
+    img_pth = f"{img_dir}/{data_type}_{cluster_id}.npy"
 
+    mean_img = np.load(img_pth)
+
+    # plot the mean nl image
+    min_val = np.min(mean_img[:, :, 0])
+    max_val = np.max(mean_img[:, :, 0])
+    plt.imshow(mean_img[:, :, 0], cmap='gray', vmin=min_val, vmax=max_val)
+    plt.axis('off')
+    if fname is not None:
+        pth = f"../figures/sat_imgs/{fname}"
+        plt.savefig(pth, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+def plot_mean_ndvi(cluster_id, fname=None):
+    data_type = 'RS_v2'
+    sat_img_dir = "../../Data/satellite_imgs"
+    img_dir = f"{sat_img_dir}/RS_v2/{data_type}_mean_cluster"
+    img_pth = f"{img_dir}/{data_type}_{cluster_id}.npy"
+
+    mean_img = np.load(img_pth)
+    color_palette = [
+        '#ffffff', '#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', '#74a901',
+        # '#66a000', '#529400', '#3e8601', '#207401', '#056201', '#004c00', '#023b01',
+        '#012e01', '#011d01', '#011301']
+
+    # Create a custom colormap using the defined color palette
+    cmap = plt.cm.colors.LinearSegmentedColormap.from_list('custom', color_palette, N=256)
+
+    # Plot the image
+    plt.imshow(mean_img[:, :, 1], cmap=cmap, vmin=-1, vmax=1)
+    plt.axis('off')
+
+    # Display the plot
+    if fname is not None:
+        pth = f"../figures/sat_imgs/{fname}"
+        plt.savefig(pth, dpi=300, bbox_inches='tight')
+
+    plt.show()
+
+
+def plot_mean_ndwi(cluster_id, fname=None):
+    data_type = 'RS_v2'
+    sat_img_dir = "../../Data/satellite_imgs"
+    img_dir = f"{sat_img_dir}/RS_v2/{data_type}_mean_cluster"
+    img_pth = f"{img_dir}/{data_type}_{cluster_id}.npy"
+
+    mean_img = np.load(img_pth)
+
+    color_palette = ['#F4F4F6', '#000E75']
+
+    # Create a custom colormap using the defined color palette
+    cmap = plt.cm.colors.LinearSegmentedColormap.from_list('custom', color_palette, N=256)
+
+    # Plot the image
+    min_val = np.min(mean_img[:, :, 2])
+    max_val = np.max(mean_img[:, :, 2])
+    plt.imshow(mean_img[:, :, 2], cmap=cmap, vmin=min_val, vmax=max_val)
+    plt.axis('off')
+
+    # Display the plot
+    if fname is not None:
+        pth = f"../figures/sat_imgs/{fname}"
+        plt.savefig(pth, dpi=300, bbox_inches='tight')
+
+    plt.show()
 
 def plot_nl(unique_id, fname = None, title = None):
     data_type = 'RS_v2'
@@ -264,7 +334,7 @@ def plot_nl(unique_id, fname = None, title = None):
     dynamic_img = np.load(img_pth)
 
     # plot the nl img
-    plt.imshow(dynamic_img[:,:,0], cmap = 'gray')
+    plt.imshow(dynamic_img[:,:,0], cmap = 'gray', vmin = 0, vmax = 1)
     plt.title(title)
     plt.axis('off')
     if fname is not None:
@@ -298,6 +368,7 @@ def plot_ndvi(unique_id, fname = None, title = None):
         plt.savefig(pth, dpi = 300, bbox_inches = 'tight')
 
     plt.show()
+
 
 def plot_nl_cluster(cluster_id, fname = None, title = None):
     data_type = 'RS_v2'
