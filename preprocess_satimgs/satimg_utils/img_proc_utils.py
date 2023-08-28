@@ -24,6 +24,7 @@ def import_tif_file(geotiff_file_path, is_ls=False):
     img = src_img.transpose(1, 2, 0)  # rearrange the dimensions of the np array
     return img
 
+
 # centers and crops the image to a 224 x 224 pixel image
 def center_crop_img(img, img_width=224, img_height=224):
     act_h = img.shape[0]
@@ -57,8 +58,9 @@ def preprocess_img(img, data_type, start_year=None):
         return fix_wsf(img, start_year, wsf_idx=2)
     elif data_type == 'WP':
         # Water is NA -> recode as 0. 
-        img[:,:,0] = np.nan_to_num(img[:, :, 0], nan=0)
+        img[:, :, 0] = np.nan_to_num(img[:, :, 0], nan=0)
         return img
+
 
 def reorder_rgb(img):
     '''
@@ -169,19 +171,21 @@ def compute_band_stats(img, data_type):
     n_bands = img.shape[2]
     band_stats = {}
     for i in range(n_bands):
-        band = img[:,:,i]
+        band = img[:, :, i]
         if data_type == "LS":
             band_stats[i] = get_basic_band_stats(band)
             band_stats[i]['n_negative'] = np.nansum(band < 0)
             band_stats[i]['n_over_1'] = np.nansum(band > 1)
         elif data_type == 'RS':
-            masked_band = band[((band > -888) | (np.isnan(band)))].flatten() # -888 indicates 'no cropland' and -999 indicates 'water'
+            masked_band = band[
+                ((band > -888) | (np.isnan(band)))].flatten()  # -888 indicates 'no cropland' and -999 indicates 'water'
             band_stats[i] = get_basic_band_stats(masked_band)
         elif data_type == 'RS_v2':
             band_stats[i] = get_basic_band_stats(band)
         else:
             raise ValueError("No known data type provided")
     return band_stats
+
 
 def get_basic_band_stats(band):
     basic_stats = {}
@@ -226,6 +230,8 @@ def aggregate_band(band_stats_band, flagged_ids):
 def calc_std(sm, ss, n):
     vr = ss / n - (sm / n) ** 2
     return np.sqrt(vr)
+
+
 # ***********************************************************************************************************************
 # Functions to process the LS images
 # ***********************************************************************************************************************
@@ -310,7 +316,6 @@ def print_band_quality(band_stats, band_name_dict):
         print(f"Band {band_name_dict[band]} mean number of NA pixels: {np.mean(aux)}")
 
 
-
 # ***********************************************************************************************************************
 # Functions to plot statistics on the images
 # ***********************************************************************************************************************
@@ -326,7 +331,7 @@ def plot_most_affected_ls_imgs(lsms_df, band_stats, band_nr, by='n_na', lower=0,
     fig, axs = plt.subplots(nrows=10, ncols=10, figsize=(50, 50))
     for i, ax in enumerate(axs.flat):
         img = load_img(most_affected_paths[i])
-        img = preprocess_img(img, data_type = 'LS')
+        img = preprocess_img(img, data_type='LS')
         ax.imshow(img[:, :, band_nr], cmap='gray')
         ax.set_title(f'{most_affected_ids[i]}-count:{most_affected_Na_count[i]}')
     plt.show()
@@ -396,7 +401,6 @@ def plot_ls_img(img, title=None):
 #     for i in range(n_bands):
 #         na_pixels[i] = sum(np.isnan(img[:, :, i].flatten()))
 #     return na_pixels
-
 
 
 # def print_band_quality(band_stats, band_name_dict, data_type):

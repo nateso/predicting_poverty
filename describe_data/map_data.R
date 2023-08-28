@@ -199,6 +199,50 @@ uga_samples <- ggplot(data = uga_shp_2) +
 ggsave('figures/maps/uga_samples_to_predict.png', device = 'png', plot = uga_samples,scale = 1, 
         width = 15, height = 15, units = 'cm', dpi = 300)
 
+#*******************************************************************************
+#### Map UGA example CV ####
+#*******************************************************************************
+# load the lsms data with fold information
+cv_df <- read.csv("../Data/lsms/processed/ex_cv_split.csv") %>%
+  filter(country == 'uga') %>% 
+  select(cluster_id, lat, lon, val_fold) %>% 
+  distinct() %>% 
+  mutate(is_fold_0 = as.factor(ifelse(val_fold == 3,1,0)))
+
+# map the clusters for fold 3
+uga_fold <- ggplot(data = uga_shp_2) +
+  geom_sf(fill = 'grey', alpha = 0.3)+
+  geom_point(data = cv_df, aes(x = lon, y = lat, col = is_fold_0)) +
+  scale_color_manual(values = c("#07306B", "red"), 
+                     labels = c('Training', 'Validation')) +
+  labs(color = "Sample") +
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.margin = margin(t = -50, r = 0, b = 10, l = 0))
+
+ggsave('figures/maps/uga_fold_3.png', device = 'png', plot = uga_fold,
+       scale = 1, width = 15, height = 15, units = 'cm', dpi = 300)
+
+# map the predictions for fold 3
+ 
+# load the predictions
+preds_df <- read.csv("results/predictions/baseline_preds.csv") %>% 
+  left_join(cv_df %>% select(cluster_id, val_fold, lat, lon), by = 'cluster_id') %>% 
+  filter(val_fold == 3)
+
+# map the predictions
+preds_map <- ggplot(data = uga_shp_2) +
+  geom_sf(fill = 'grey', alpha = 0.3)+
+  geom_point(data = preds_df, aes(x = lon, y = lat, col = y_hat)) +
+  theme_void() +
+  scale_color_viridis(option = 'plasma', 
+                      name = 'log pc $/day',
+                      guide = 'colourbar')
+
+ggsave('figures/maps/preds_uga_3.png', device = 'png', plot = preds_map,
+       scale = 1, width = 15, height = 15, units = 'cm', dpi = 300)
+
 
 #*******************************************************************************
 #### Map bounding boxes ####
@@ -206,9 +250,9 @@ ggsave('figures/maps/uga_samples_to_predict.png', device = 'png', plot = uga_sam
 
 # select two-three clusters that are close to each other
 sel_cls <- c("uga_3040002", 'uga_3040007', 'uga_3040004', 'uga_3040009' )
-sel_cls <- c('uga_2090018', 'uga_2090029', 'uga_2090026')
-sel_cls <- c('eth_071801088800101','eth_071801088801001', 'eth_071801088802302')
-sel_cls <- c('tza_05-03-073-05-012', 'tza_5308321','tza_05-03-083-03-311', 'tza_05-04-011-01-008')
+#sel_cls <- c('uga_2090018', 'uga_2090029', 'uga_2090026')
+#sel_cls <- c('eth_071801088800101','eth_071801088801001', 'eth_071801088802302')
+#sel_cls <- c('tza_05-03-073-05-012', 'tza_5308321','tza_05-03-083-03-311', 'tza_05-04-011-01-008')
 sel_cls_df <- cl_df %>% 
   filter(cluster_id %in% sel_cls)
 
@@ -229,7 +273,7 @@ map <- leaflet() %>%
   addTiles() %>%
   addCircleMarkers(data = sel_cls_df,
                    lng = ~lon, lat = ~lat,
-                   color = "red", radius = 2, fill = 'red') %>% 
+                   color = "#07306B", radius = 2, fill = '#07306B')# %>% 
   addCircleMarkers(data = sel_cls_df, 
                    lng = ~lsms_lon, lat = ~lsms_lat,
                    color = 'black', radius = 2, fill = 'black')
@@ -248,7 +292,7 @@ map <- map %>%
     title = "Legend"
   )
 
-export_png(map, 'figures/maps', 'bounding_boxes_tza')
+export_png(map, 'figures/maps', 'bounding_boxes_uga')
 
 ##### map a single cluster #####
 
@@ -264,7 +308,7 @@ map <- leaflet() %>%
   setView(lng = sel_cls_df$lon, lat = sel_cls_df$lat, zoom = 14) %>%
   addTiles() %>%
   addPolygons(data = rect_buffer, color = "blue",
-              fillOpacity = 0, weight = .4)
+              fillOpacity = 0, weight = .3)
   
 export_png(map, 'figures/maps', 'osm_example_roi')
 
