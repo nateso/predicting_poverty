@@ -84,6 +84,9 @@ for band, stats in rs_v2_mean_imgs_stats.items():
 #### dynamic data
 # load the precipitation data
 precip_df = pd.read_csv(precip_pth)
+precip_df = pd.merge(precip_df, lsms_df[['cluster_id','unique_id']], on='unique_id', how='left')
+precip_df['avg_precipitation'] = precip_df.groupby('cluster_id')['precipitation'].transform('mean')
+precip_df = precip_df.drop(columns = ['cluster_id'])
 
 # load the dynamic image stats and extract the mean and std for each channel
 with open(dynamic_img_stats_pth, 'rb') as f:
