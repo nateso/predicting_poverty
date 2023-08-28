@@ -144,7 +144,7 @@ def plot_ls(cluster_id, fname = None, title = None):
     plt.title(title)
     if fname is not None:
       pth = f"../figures/sat_imgs/{fname}"
-      plt.savefig(pth, dpi = 300, bbox_inches = 'tight')
+      plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
     plt.show()
 
 
@@ -164,10 +164,10 @@ def plot_wsf(cluster_id, fname = None, title = None):
     plt.title(title)
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi = 300, bbox_inches = 'tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
     plt.show()
 
-def plot_lc_esa(cluster_id, fname = None, title = None):
+def plot_lc_esa(cluster_id, fname = None, title = None, legend = True):
     data_type = 'RS_v2'
     sat_img_dir = "../../Data/satellite_imgs"
     img_dir = f"{sat_img_dir}/RS_v2/{data_type}_static_processed"
@@ -196,14 +196,15 @@ def plot_lc_esa(cluster_id, fname = None, title = None):
     plt.title(title)
 
     # Create colorbar with labels
-    tick_values = np.linspace(.15,.75,8)
-    cbar = plt.colorbar(image, ticks=tick_values)#, fraction=0.046, pad=0.04)
-    cbar.ax.set_yticklabels(labels)
+    if legend:
+        tick_values = np.linspace(.15,.75,8)
+        cbar = plt.colorbar(image, ticks=tick_values)#, fraction=0.046, pad=0.04)
+        cbar.ax.set_yticklabels(labels)
 
     # save the image
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi = 300, bbox_inches = 'tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches=0)
 
     plt.show()
 
@@ -246,7 +247,7 @@ def plot_lc_modis(unique_id, fname = None, title = None):
 
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi = 300, bbox_inches = 'tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
     plt.show()
 
 
@@ -268,7 +269,7 @@ def plot_mean_nl(cluster_id, fname=None):
     plt.axis('off')
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi=300, bbox_inches='tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
     plt.show()
 
 
@@ -294,7 +295,7 @@ def plot_mean_ndvi(cluster_id, fname=None):
     # Display the plot
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi=300, bbox_inches='tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
 
     plt.show()
 
@@ -321,7 +322,7 @@ def plot_mean_ndwi(cluster_id, fname=None):
     # Display the plot
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi=300, bbox_inches='tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
 
     plt.show()
 
@@ -339,7 +340,7 @@ def plot_nl(unique_id, fname = None, title = None):
     plt.axis('off')
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi = 300, bbox_inches = 'tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
     plt.show()
 
 def plot_ndvi(unique_id, fname = None, title = None):
@@ -365,7 +366,7 @@ def plot_ndvi(unique_id, fname = None, title = None):
     # Display the plot
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi = 300, bbox_inches = 'tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
 
     plt.show()
 
@@ -401,7 +402,7 @@ def plot_nl_cluster(cluster_id, fname = None, title = None):
 
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi=300, bbox_inches='tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
 
     plt.show()
 
@@ -446,7 +447,7 @@ def plot_ndvi_cluster(cluster_id, fname=None, title=None):
 
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi=300, bbox_inches='tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
 
     plt.show()
 
@@ -487,7 +488,7 @@ def plot_ndwi_gao_cluster(cluster_id, fname=None, title=None):
 
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi=300, bbox_inches='tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
 
     plt.show()
 
@@ -529,7 +530,7 @@ def plot_ndwi_mcf_cluster(cluster_id, fname=None, title=None):
 
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"
-        plt.savefig(pth, dpi=300, bbox_inches='tight')
+        plt.savefig(pth, dpi = 300, bbox_inches = 'tight', pad_inches = 0)
 
     plt.show()
 
@@ -537,7 +538,7 @@ def plot_ndwi_mcf_cluster(cluster_id, fname=None, title=None):
 #******************************************************************************
 #........ Functions to plot demeaned / delta images ........
 #******************************************************************************
-    def plot_demeaned_imgs(cluster_id, fname=None, title=None, channel=0):
+def plot_demeaned_imgs(cluster_id, fname=None, title=None, channel=0):
         data_type = 'RS_v2'
         sat_img_dir = "../../Data/satellite_imgs"
         img_dir = f"{sat_img_dir}/RS_v2/{data_type}_demeaned"
@@ -568,10 +569,35 @@ def plot_ndwi_mcf_cluster(cluster_id, fname=None, title=None):
 
         if fname is not None:
             pth = f"../figures/sat_imgs/{fname}"
-            plt.savefig(pth, dpi=300, bbox_inches='tight')
+            plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
 
         plt.show()
 
+
+def plot_demeaned_img(cluster_id, fname=None, title=None, channel=0):
+    data_type = 'RS_v2'
+    sat_img_dir = "../../Data/satellite_imgs"
+    img_dir = f"{sat_img_dir}/RS_v2/{data_type}_demeaned"
+
+    # list all files in image directory
+    files = np.array(os.listdir(img_dir))
+    mask = [cluster_id in i for i in files]
+    files = np.sort(files[mask])
+    img = files[-1]
+
+    # Plot the image
+    min_val = np.min(img[:, :, channel])
+    max_val = np.max(img[:, :, channel])
+    plt.imshow(img[:, :, channel], cmap='gray', vmin=min_val, vmax=max_val)
+    plt.axis('off')
+
+    plt.tight_layout()
+
+    if fname is not None:
+        pth = f"../figures/sat_imgs/{fname}"
+        plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
+
+    plt.show()
 
 #******************************************************************************
 #........ Functions to plot target variables ........
