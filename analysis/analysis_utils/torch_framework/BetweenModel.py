@@ -150,16 +150,6 @@ class BetweenModel:
             mse = np.mean(self.mse['val'])
             return {'r2':r2, 'mse':mse}
 
-    def save_object(self, name):
-        folder = f"model_results"
-        if not os.path.isdir(folder):
-            os.makedirs(folder)
-        pth = f"model_results/{name}.pkl"
-        with open(pth, 'wb') as f:
-            aux = copy.deepcopy(self)
-            aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle
-            pickle.dump(aux, f)
-
     def get_feature_importance(self):
         # add feature importance
         feat_importance = self.models[0].feature_importances_
@@ -180,4 +170,14 @@ class BetweenModel:
         plt.ylabel("Feature Importance")
         plt.xlabel("Relative Feature Importance")
         plt.show()
+
+    def save_object(self, name):
+        folder = f'../results/model_objects'
+        if not os.path.isdir(folder):
+            os.makedirs(folder)
+        pth = f"{folder}/{name}.pkl"
+        with open(pth, 'wb') as f:
+            aux = copy.deepcopy(self)
+            aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle
+            pickle.dump(aux, f)
 

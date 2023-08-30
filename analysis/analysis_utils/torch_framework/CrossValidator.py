@@ -162,10 +162,10 @@ class CrossValidator():
         plt.show()
 
     def save_object(self, name):
-        folder = f"model_results"
+        folder = f'../results/model_objects'
         if not os.path.isdir(folder):
             os.makedirs(folder)
-        pth = f"model_results/{name}.pkl"
+        pth = f"{folder}/{name}.pkl"
         with open(pth, 'wb') as f:
             aux = copy.deepcopy(self)
             aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle

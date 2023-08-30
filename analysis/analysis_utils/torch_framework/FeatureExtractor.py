@@ -1,13 +1,10 @@
 import copy
+
 import numpy as np
 import torch
 import torch.nn as nn
-from tqdm.auto import tqdm
 from sklearn.decomposition import PCA
-
-from torch.utils.data import DataLoader
-from .SatDataset import SatDataset
-import torchvision
+from tqdm.auto import tqdm
 
 
 def reduce_dimensions(extracted_feats, n_components):

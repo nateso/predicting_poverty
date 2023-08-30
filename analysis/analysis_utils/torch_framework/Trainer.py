@@ -133,7 +133,7 @@ class Trainer():
         print(f"Finished training after {time_elapsed} seconds")
 
     def save_model_params(self, suffix):
-        folder = f'model_checkpoints/{self.model_folder}'
+        folder = f'../results/model_checkpoints/{self.model_folder}'
         if not os.path.isdir(folder):
             os.makedirs(folder)
         checkpoint_pth = f"{folder}/{self.model_name}_{suffix}.pth"
@@ -157,7 +157,7 @@ class Trainer():
             max_r2_idx = np.argmax(self.r2['val'])
             print(f"Lowest loss on validation set in epoch {min_loss_idx}: {min_loss:.6f}")
             print(f"Maximum R2 on validation set in epoch {max_r2_idx}: {max_r2:.6f}")
-            self.best_model_path = f"model_checkpoints/{self.model_folder}/{self.model_name}_best.pth"
+            self.best_model_path = f"../results/model_checkpoints/{self.model_folder}/{self.model_name}_best.pth"
         else:
             print("Model not yet trained")
 
