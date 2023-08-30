@@ -2,6 +2,7 @@ import torch
 import os
 import numpy as np
 from torch.utils.data import Dataset
+from PIL import Image
 
 
 class SatDataset(Dataset):
@@ -24,11 +25,12 @@ class SatDataset(Dataset):
 
         # load the image data
         image = torch.from_numpy(np.load(img_path).astype(np.float32).transpose(2, 1, 0))
+        if self.feat_transform:
+            image = self.feat_transform(image)
 
         # load the label data
         label = torch.from_numpy(np.array(self.img_labels[self.target_var][idx], dtype=np.float32))
-        if self.feat_transform:
-            image = self.feat_transform(image)
         if self.target_transform:
             label = self.target_transform(label)
+
         return image, label

@@ -5,6 +5,10 @@ import torch.nn as nn
 from tqdm.auto import tqdm
 from sklearn.decomposition import PCA
 
+from torch.utils.data import DataLoader
+from .SatDataset import SatDataset
+import torchvision
+
 
 def reduce_dimensions(extracted_feats, n_components):
     pca = PCA(n_components=n_components)
@@ -19,24 +23,21 @@ def reduce_dimensions(extracted_feats, n_components):
     return X_reduced
 
 
-class FeatureExtractor():
-    def __init__(self, model, state_dict_pth, device):
+class FeatureExtractor:
+    def __init__(self, model, device):
         self.model = copy.deepcopy(model)
-        self.state_dict_pth = state_dict_pth
         self.device = device
 
-        self.load_state_dict()
-        self.model.fc = nn.Identity()  # replace the last layer in the network with an identity to directly output the penultimate layer.
-
-    def load_state_dict(self):
-        self.model.load_state_dict(torch.load(self.state_dict_pth, map_location=self.device))
+        # replace the last layer in the network with an identity to directly output the penultimate layer.
+        self.model.fc = nn.Identity()
 
     def extract_feats(self, dat_loader, reduced=True, n_components=50):
         print('\tExtracting Features')
+        self.model.to(self.device)
         self.model.eval()  # initialise validation mode
         extracted_feats = []
         with torch.no_grad():  # disable gradient tracking
-            for x, _ in tqdm(dat_loader):
+            for x, _ in dat_loader:
                 # forward pass
                 feats = self.model(x.to(self.device))
                 extracted_feats.append(feats.cpu().numpy())

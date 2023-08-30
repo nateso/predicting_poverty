@@ -11,13 +11,14 @@ from .SatDataset import SatDataset
 from .Trainer import Evaluator
 from .Trainer import Trainer
 from .torch_helpers import *
-from ..analysis_utils.spatial_CV import *
+from ..spatial_CV import *
 
 
 class CrossValidator():
     def __init__(self, model, lsms_df, fold_ids, img_dir,
                  data_type,
                  target_var,
+                 id_var,
                  feat_transform,
                  target_transform,
                  device,
@@ -33,6 +34,7 @@ class CrossValidator():
         self.img_dir = img_dir
         self.data_type = data_type
         self.target_var = target_var
+        self.id_var = id_var
         self.feat_transform = feat_transform
         self.target_transform = target_transform
         self.device = device
@@ -46,7 +48,7 @@ class CrossValidator():
         self.predictions = {'unique_id': [], 'y': [], 'y_hat': []}
         self.best_model_paths = []
 
-    def run_cv(self, hyper_params, tune_params=False):
+    def run_cv(self, hyper_params):
         start_time = time.time()
 
         for fold, split in tqdm(self.fold_ids.items()):
@@ -59,7 +61,7 @@ class CrossValidator():
                 torch.manual_seed(self.random_seed)
 
             # prepare the data
-            train_df, val_df, test_df = self.split_data_train_val_test(self.lsms_df, split['val_ids'])
+            train_df, val_df, test_df = self.split_data_train_val_test(split['val_ids'])
             train_loader, val_loader, test_loader = self.get_dataloaders(train_df, val_df, test_df,
                                                                          batch_size=hyper_params['batch_size'])
             # print(val_df.cluster_id)
@@ -116,12 +118,12 @@ class CrossValidator():
 
     def get_dataloaders(self, train_df, val_df, test_df, batch_size):
         # initialise the Landsat data
-        dat_train = SatDataset(train_df, self.img_dir, self.data_type,
-                               self.target_var, self.feat_transform, self.target_transform)
-        dat_val = SatDataset(val_df, self.img_dir, self.data_type,
-                             self.target_var, self.feat_transform, self.target_transform)
-        dat_test = SatDataset(test_df, self.img_dir, self.data_type,
-                              self.target_var, self.feat_transform, self.target_transform)
+        dat_train = SatDataset(train_df, self.img_dir, self.data_type, self.target_var, self.id_var,
+                               self.feat_transform, self.target_transform)
+        dat_val = SatDataset(val_df, self.img_dir, self.data_type, self.target_var, self.id_var,
+                             self.feat_transform, self.target_transform)
+        dat_test = SatDataset(test_df, self.img_dir, self.data_type, self.target_var, self.id_var,
+                              self.feat_transform, self.target_transform)
 
         # initialise the data loader objects
         if self.random_seed is not None:
@@ -148,7 +150,7 @@ class CrossValidator():
             return {'r2': r2, 'mse': mse}
 
     def plot_true_vs_preds(self, xlabel="Predicted outcome values", ylabel='True outcome values'):
-        ## plots the true observations vs the predicted observations
+        # plots the true observations vs the predicted observations
         y_hat = np.array(self.predictions['y_hat'])
         y = np.array(self.predictions['y'])
         plt.figure(figsize=(5, 5))
@@ -166,7 +168,7 @@ class CrossValidator():
         pth = f"model_results/{name}.pkl"
         with open(pth, 'wb') as f:
             aux = copy.deepcopy(self)
-            aux.target_transform = None  # remove transforms as they often cannot be saved as pickles
-            aux.feat_transform = None
-            aux.model = None  # remove the model, the best model is saved somewhere else.
+            aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle
+            #aux.feat_transform = None
+            #aux.model = None  # remove the model, the best model is saved somewhere else.
             pickle.dump(aux, f)
