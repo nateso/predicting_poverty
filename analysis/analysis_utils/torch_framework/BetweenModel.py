@@ -39,7 +39,7 @@ class BetweenModel:
         self.models = {}
         self.feat_names = []
 
-    def train(self, min_samples_leaf = 10):
+    def train(self, min_samples_leaf = 10, n_components = 50):
         print('Initialising training')
         start_time = time.time()
 
@@ -69,12 +69,12 @@ class BetweenModel:
             rs_feat_extractor = FeatureExtractor(rs_model, self.device)
 
             print("Landsat Feature Extraction")
-            ls_train_feats = ls_feat_extractor.extract_feats(ls_train_loader, reduced=True, n_components=1)
-            ls_val_feats = ls_feat_extractor.extract_feats(ls_val_loader, reduced=True, n_components=1)
+            ls_train_feats = ls_feat_extractor.extract_feats(ls_train_loader, reduced=True, n_components=n_components)
+            ls_val_feats = ls_feat_extractor.extract_feats(ls_val_loader, reduced=True, n_components=n_components)
 
             print("RS Feature Extraction")
-            rs_train_feats = rs_feat_extractor.extract_feats(rs_train_loader, reduced=True, n_components=1)
-            rs_val_feats = rs_feat_extractor.extract_feats(rs_val_loader, reduced=True, n_components=1)
+            rs_train_feats = rs_feat_extractor.extract_feats(rs_train_loader, reduced=True, n_components=n_components)
+            rs_val_feats = rs_feat_extractor.extract_feats(rs_val_loader, reduced=True, n_components=n_components)
             print("\n")
 
             # concatenate the rs feats, the ls feats, the OSM feats and the precip feats
