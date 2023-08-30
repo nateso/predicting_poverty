@@ -37,7 +37,7 @@ class FeatureExtractor:
         self.model.eval()  # initialise validation mode
         extracted_feats = []
         with torch.no_grad():  # disable gradient tracking
-            for x, _ in dat_loader:
+            for x, _ in tqdm(dat_loader):
                 # forward pass
                 feats = self.model(x.to(self.device))
                 extracted_feats.append(feats.cpu().numpy())
