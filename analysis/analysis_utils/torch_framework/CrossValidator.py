@@ -36,7 +36,7 @@ class CrossValidator():
         self.target_var = target_var
         self.id_var = id_var
         self.feat_transform_train = feat_transform
-        self.feat_transform_val_test = torchvision.transforms.Compose([feat_transform[-1]])
+        self.feat_transform_val_test = torchvision.transforms.Compose([feat_transform.transforms[-1]])
         self.target_transform = target_transform
         self.device = device
         self.random_seed = random_seed
