@@ -129,7 +129,7 @@ class BetweenModel:
 
     def get_dataloaders(self, cv_object, train_df, val_df, batch_size):
         # only take the normalisation from the feature transforms
-        feat_transform = torchvision.transforms.Compose(cv_object.feat_transform.transforms[-1])
+        feat_transform = torchvision.transforms.Compose([cv_object.feat_transform.transforms[-1]])
 
         # initialise the Landsat data
         dat_train = SatDataset(train_df, cv_object.img_dir, cv_object.data_type, cv_object.target_var, cv_object.id_var,
