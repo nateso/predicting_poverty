@@ -43,11 +43,12 @@ class BetweenModel:
         print('Initialising training')
         start_time = time.time()
 
-        if self.random_seed is not None:
-            np.random.seed(self.random_seed)
-            torch.manual_seed(self.random_seed)
-
         for fold, splits in tqdm(self.fold_ids.items(), total = len(self.fold_ids)):
+            # set the random seed for each fold
+            if self.random_seed is not None:
+                np.random.seed(self.random_seed + fold)
+                torch.manual_seed(self.random_seed + fold)
+
             # load the best landsat and rs models
             ls_state_dict = self.cv_ls.best_model_paths[fold]
             ls_model = self.cv_ls.model

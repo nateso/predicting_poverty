@@ -58,8 +58,8 @@ class CrossValidator():
                 model_fold_name = f"{self.model_name}_f{fold}"
 
             if self.random_seed is not None:
-                np.random.seed(self.random_seed)
-                torch.manual_seed(self.random_seed)
+                np.random.seed(self.random_seed + fold)
+                torch.manual_seed(self.random_seed + fold)
 
             # prepare the data
             train_df, val_df, test_df = self.split_data_train_val_test(split['val_ids'])
