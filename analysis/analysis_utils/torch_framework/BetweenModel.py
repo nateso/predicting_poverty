@@ -30,7 +30,7 @@ class BetweenModel:
         self.random_seed = random_seed
 
         # get the target transform
-        self.target_transform = self.get_target_transform()
+        #self.target_transform = self.get_target_transform()
 
         # initialise the objects to store the results
         self.r2 = {'train': [], 'val': []}
@@ -114,25 +114,28 @@ class BetweenModel:
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished training after {time_elapsed} seconds")
 
-    def get_target_transform(self):
-        # get the target transform:
-        # get the stats for the target variable
-        target_stats = get_target_stats(self.df, self.target_var)
-
-        # get the data transforms for the target --> is used in the DataLoader object
-        target_transform = transforms.Compose([
-            torchvision.transforms.Lambda(
-                lambda t: standardise(t, target_stats['mean'], target_stats['std'])),
-        ])
-
-        return target_transform
+    # def get_target_transform(self):
+    #     # get the target transform:
+    #     # get the stats for the target variable
+    #     target_stats = get_target_stats(self.df, self.target_var)
+    #
+    #     # get the data transforms for the target --> is used in the DataLoader object
+    #     target_transform = transforms.Compose([
+    #         torchvision.transforms.Lambda(
+    #             lambda t: standardise(t, target_stats['mean'], target_stats['std'])),
+    #     ])
+    #
+    #     return target_transform
 
     def get_dataloaders(self, cv_object, train_df, val_df, batch_size):
+        # only take the normalisation from the feature transforms
+        feat_transform = torchvision.transforms.Compose(cv_object.feat_transform.transforms[-1])
+
         # initialise the Landsat data
         dat_train = SatDataset(train_df, cv_object.img_dir, cv_object.data_type, cv_object.target_var, cv_object.id_var,
-                               cv_object.feat_transform, self.target_transform)
+                               feat_transform = feat_transform, target_transform = None)
         dat_val = SatDataset(val_df, cv_object.img_dir, cv_object.data_type, cv_object.target_var, cv_object.id_var,
-                             cv_object.feat_transform, self.target_transform)
+                             feat_transform = feat_transform, target_transform = None)
 
         train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=False)
         val_loader = DataLoader(dat_val, batch_size=batch_size, shuffle=False)
@@ -177,7 +180,5 @@ class BetweenModel:
             os.makedirs(folder)
         pth = f"{folder}/{name}.pkl"
         with open(pth, 'wb') as f:
-            aux = copy.deepcopy(self)
-            aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle
-            pickle.dump(aux, f)
+            pickle.dump(self, f)
 
