@@ -35,7 +35,8 @@ class CrossValidator():
         self.data_type = data_type
         self.target_var = target_var
         self.id_var = id_var
-        self.feat_transform = feat_transform
+        self.feat_transform_train = feat_transform
+        self.feat_transform_val_test = torchvision.transforms.Compose([feat_transform[-1]])
         self.target_transform = target_transform
         self.device = device
         self.random_seed = random_seed
@@ -119,11 +120,11 @@ class CrossValidator():
     def get_dataloaders(self, train_df, val_df, test_df, batch_size):
         # initialise the Landsat data
         dat_train = SatDataset(train_df, self.img_dir, self.data_type, self.target_var, self.id_var,
-                               self.feat_transform, self.target_transform)
+                               self.feat_transform_train, self.target_transform)
         dat_val = SatDataset(val_df, self.img_dir, self.data_type, self.target_var, self.id_var,
-                             self.feat_transform, self.target_transform)
+                             self.feat_transform_val_test, self.target_transform)
         dat_test = SatDataset(test_df, self.img_dir, self.data_type, self.target_var, self.id_var,
-                              self.feat_transform, self.target_transform)
+                              self.feat_transform_val_test, self.target_transform)
 
         # initialise the data loader objects
         if self.random_seed is not None:
