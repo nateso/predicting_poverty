@@ -68,11 +68,11 @@ class BetweenModel:
             ls_feat_extractor = FeatureExtractor(ls_model, self.device)
             rs_feat_extractor = FeatureExtractor(rs_model, self.device)
 
-            print("Landsat Feature Extraction")
+            print("Landsat Feature Extraction - Train, Val")
             ls_train_feats = ls_feat_extractor.extract_feats(ls_train_loader, reduced=True, n_components=n_components)
             ls_val_feats = ls_feat_extractor.extract_feats(ls_val_loader, reduced=True, n_components=n_components)
 
-            print("RS Feature Extraction")
+            print("RS Feature Extraction - Train, Val")
             rs_train_feats = rs_feat_extractor.extract_feats(rs_train_loader, reduced=True, n_components=n_components)
             rs_val_feats = rs_feat_extractor.extract_feats(rs_val_loader, reduced=True, n_components=n_components)
             print("\n")
