@@ -205,8 +205,8 @@ for cid, uids in tqdm(cid_uid_dict.items()):
     esa_lc_img[(esa_lc_img == 95) | (esa_lc_img == 90)] = 70
 
     # assign values between 0 and 1 to the categories (values will range from 0.1, to 0.8)
-    # TODO: check the values that are assigned to the categories --> getting weird min max values atm.
-    esa_lc_img = esa_lc_img / 100
+    # DONE: check the values that are assigned to the categories --> getting weird min max values atm.
+    esa_lc_img = np.trunc(esa_lc_img / 10)/10
 
     # load the WSF image
     wsf_pth = f'{sat_img_dir}/{data_type}/WSF_raw/WSF_{cid}.tif'

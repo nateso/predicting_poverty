@@ -83,6 +83,7 @@ for cid, uids in tqdm(cid_uid_dict.items()):
         for j in range(i + 1, len(dynamic_imgs)):
             year_2 = uids[j][-4:]
             #print(f"{year_1}_{year_2}")
+            # substract the older image from the newer image
             delta_img = dynamic_imgs[j] - dynamic_imgs[i]
             delta_imgs.append(delta_img)
             delta_id_list.append(f"{cid}_{year_1}_{year_2}")
