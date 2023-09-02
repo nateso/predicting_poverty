@@ -10,19 +10,23 @@ sat_img_dir = f"{root_data_dir}/satellite_imgs"
 lsms_path = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
 lsms_df = pd.read_csv(lsms_path)
 
-# create folder to save the demaned images
-demeaned_img_dir = f"{sat_img_dir}/RS_v2/RS_v2_demeaned"
-if not os.path.isdir(demeaned_img_dir):
-    os.makedirs(demeaned_img_dir)
-else:
-    print(f"Warning: RS_v2_demeaned Folder already exists. Files might be overwritten.")
-    if input("Do You Want To Continue? [y/n]") == 'n':
-        exit("Process aborted.")
+# # create folder to save the demaned images
+# demeaned_img_dir = f"{sat_img_dir}/RS_v2/RS_v2_demeaned"
+# if not os.path.isdir(demeaned_img_dir):
+#     os.makedirs(demeaned_img_dir)
+# else:
+#     print(f"Warning: RS_v2_deltas Folder already exists. Files might be overwritten.")
+#     if input("Do You Want To Continue? [y/n]") == 'n':
+#         exit("Process aborted.")
 
 # create folder to store the image deltas
-delta_img_dir = f"{sat_img_dir}/RS_v2/RS_v2_deltas"
+delta_img_dir = f"{sat_img_dir}/RS_v2/RS_v2_delta"
 if not os.path.isdir(delta_img_dir):
     os.makedirs(delta_img_dir)
+else:
+    print(f"Warning: RS_v2_deltas Folder already exists. Files might be overwritten.")
+    if input("Do You Want To Continue? [y/n]") == 'n':
+        exit("Process aborted.")
 
 # create dictionary of cluster_id to unique_ids
 cid_uid_dict = {}
@@ -69,7 +73,8 @@ for cid, uids in tqdm(cid_uid_dict.items()):
 
     # save the demeaned images
     for i, uid in enumerate(uids):
-        np.save(f"{demeaned_img_dir}/{data_type}_{uid}.npy", demeaned_imgs[i])
+        # save it to the delta dir
+        np.save(f"{delta_img_dir}/{data_type}_{uid}.npy", demeaned_imgs[i])
 
     # substract the dynamic images from each other to create deltas
     delta_imgs = []
@@ -110,10 +115,15 @@ for band_key in delta_img_stats.keys():
     delta_img_stats[band_key] = pd.json_normalize(delta_img_stats[band_key])
     delta_img_stats[band_key]['delta_id'] = delta_id_list
 
+# append the demeaned images stats to the delta img stats
+for k in delta_img_stats.keys():
+    # rename the id variable in the demeaned_img_stats
+    aux = demeaned_img_stats[k].copy().rename(columns={'unique_id': 'delta_id'})
+
+    # append both dfs
+    delta_img_stats[k] = pd.concat([delta_img_stats[k], aux]).reset_index(drop=True)
+
 # save the image statistics as pickle
-pth = f"{sat_img_dir}/RS_v2/RS_v2_demeaned_img_stats.pkl"
-with open(pth, 'wb') as f:
-    pickle.dump(demeaned_img_stats, f)
 
 pth = f"{sat_img_dir}/RS_v2/RS_v2_delta_img_stats.pkl"
 with open(pth, 'wb') as f:
