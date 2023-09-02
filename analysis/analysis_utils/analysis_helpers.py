@@ -42,13 +42,16 @@ def make_delta_df(df):
     # iterate over all clusters creating deltas
     delta_list = []
     for cid, uids in tqdm(cid_uid_dict.items()):
+        # subset the data to the cluster
         cid_df = df[df['cluster_id'] == cid].reset_index(drop=True)
+        # iterate over all years in the cluster
         for i in range(len(cid_df) - 1):
             year_1 = cid_df['unique_id'][i][-4:]
             for j in range(i + 1, len(cid_df)):
                 year_2 = cid_df['unique_id'][j][-4:]
                 x_0 = cid_df.iloc[i, :].drop(id_columns)
                 x_1 = cid_df.iloc[j, :].drop(id_columns)
+                # substract the two years (the most recent year minus the older year)
                 delta = x_1 - x_0
                 delta['cluster_id'] = cid
                 delta['delta_id'] = cid + "_" + year_1 + "_" + year_2
@@ -58,7 +61,7 @@ def make_delta_df(df):
     return delta_df
 
 
-def demean(df):
+def demean_df(df):
     id_columns = ['cluster_id', 'unique_id']
     # Group the DataFrame by the cluster ID variable and calculate the mean of each group
     cluster_means = df.groupby('cluster_id').mean(numeric_only=True)

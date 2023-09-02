@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.ma as ma
 import os
+import re
 #******************************************************************************
 #........ Functions to plot Landsat images ........
 #******************************************************************************
@@ -387,7 +388,7 @@ def plot_nl_cluster(cluster_id, fname = None, title = None):
     rows = 1
     cols = num_images
 
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 5))
+    fig, axes = plt.subplots(rows, cols, figsize=(15, 5))
 
     for i, file in enumerate(files):
         year = file[-8:-4]
@@ -423,7 +424,7 @@ def plot_ndvi_cluster(cluster_id, fname=None, title=None):
     rows = 1
     cols = num_images
 
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 5))
+    fig, axes = plt.subplots(rows, cols, figsize=(15, 5))
 
     color_palette = [
         '#ffffff', '#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', '#74a901',
@@ -467,7 +468,7 @@ def plot_ndwi_gao_cluster(cluster_id, fname=None, title=None):
     rows = 1
     cols = num_images
 
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 5))
+    fig, axes = plt.subplots(rows, cols, figsize=(15, 5))
 
     color_palette = ['#F4F4F6', '#000E75']
 
@@ -509,7 +510,7 @@ def plot_ndwi_mcf_cluster(cluster_id, fname=None, title=None):
     rows = 1
     cols = num_images
 
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 5))
+    fig, axes = plt.subplots(rows, cols, figsize=(15, 5))
 
     color_palette = ['#F4F4F6', '#000E75']
 
@@ -538,60 +539,72 @@ def plot_ndwi_mcf_cluster(cluster_id, fname=None, title=None):
 #******************************************************************************
 #........ Functions to plot demeaned / delta images ........
 #******************************************************************************
-def plot_demeaned_imgs(cluster_id, fname=None, title=None, channel=0):
-        data_type = 'RS_v2'
-        sat_img_dir = "../../Data/satellite_imgs"
-        img_dir = f"{sat_img_dir}/RS_v2/{data_type}_demeaned"
+# def plot_demeaned_imgs(cluster_id, fname=None, title=None, channel=0):
+#         data_type = 'RS_v2'
+#         sat_img_dir = "../../Data/satellite_imgs"
+#         img_dir = f"{sat_img_dir}/RS_v2/{data_type}_demeaned"
+#
+#         # list all files in image directory
+#         files = np.array(os.listdir(img_dir))
+#         mask = [cluster_id in i for i in files]
+#         files = np.sort(files[mask])
+#
+#         # plot all images in one plot
+#         num_images = len(files)
+#         rows = 1
+#         cols = num_images
+#
+#         fig, axes = plt.subplots(rows, cols, figsize=(15, 5))
+#
+#         for i, file in enumerate(files):
+#             year = file[-8:-4]
+#             img_pth = os.path.join(img_dir, file)
+#             img = np.load(img_pth)[:, :, channel]
+#             ax = axes[i]
+#             ax.imshow(img)
+#             ax.axis('off')
+#
+#             ax.set_title(f"{year}")
+#         plt.tight_layout()
+#         # plt.legend()
+#
+#         if fname is not None:
+#             pth = f"../figures/sat_imgs/{fname}"
+#             plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
+#
+#         plt.show()
 
-        # list all files in image directory
-        files = np.array(os.listdir(img_dir))
-        mask = [cluster_id in i for i in files]
-        files = np.sort(files[mask])
 
-        # plot all images in one plot
-        num_images = len(files)
-        rows = 1
-        cols = num_images
-
-        fig, axes = plt.subplots(rows, cols, figsize=(10, 5))
-
-        for i, file in enumerate(files):
-            year = file[-8:-4]
-            img_pth = os.path.join(img_dir, file)
-            img = np.load(img_pth)[:, :, channel]
-            ax = axes[i]
-            ax.imshow(img)
-            ax.axis('off')
-
-            ax.set_title(f"{year}")
-        plt.tight_layout()
-        # plt.legend()
-
-        if fname is not None:
-            pth = f"../figures/sat_imgs/{fname}"
-            plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
-
-        plt.show()
-
-
-def plot_demeaned_img(cluster_id, fname=None, title=None, channel=0):
+def plot_demeaned_img(cluster_id, fname=None, channel=0):
     data_type = 'RS_v2'
     sat_img_dir = "../../Data/satellite_imgs"
-    img_dir = f"{sat_img_dir}/RS_v2/{data_type}_demeaned"
+    img_dir = f"{sat_img_dir}/RS_v2/{data_type}_delta"
 
     # list all files in image directory
     files = np.array(os.listdir(img_dir))
     mask = [cluster_id in i for i in files]
     files = np.sort(files[mask])
-    img = files[-1]
+
+    # exclude image delta (i.e. keep only the demeaned images)
+    pattern = r'_\d{4}_\d{4}\.npy'
+    files = [f for f in files if not re.search(pattern, f)]
+
+    # just plot the last demeaned image
+    file = files[-1]
+
+    # load the image
+    img_pth = os.path.join(img_dir, file)
+    img = np.load(img_pth)[:, :, channel]
 
     # Plot the image
-    min_val = np.min(img[:, :, channel])
-    max_val = np.max(img[:, :, channel])
-    plt.imshow(img[:, :, channel], cmap='gray', vmin=min_val, vmax=max_val)
+    min_val = np.min(img)
+    max_val = np.max(img)
+    plt.imshow(img, cmap='gray', vmin=min_val, vmax=max_val)
     plt.axis('off')
 
     plt.tight_layout()
+
+    print(f"file name: {file}")
 
     if fname is not None:
         pth = f"../figures/sat_imgs/{fname}"

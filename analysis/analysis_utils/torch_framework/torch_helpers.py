@@ -43,8 +43,8 @@ def get_agg_img_stats(img_stat_pth, lsms_df, id_var):
 
 def aggregate_img_stats(img_stats, flagged_ids=[]):
     '''
-    Takes the iamge statistics dictionary as input and returns aggregated image statistics for each band
-    exlcuding any flagged ids
+    Takes the image statistics dictionary as input and returns aggregated image statistics for each band
+    excluding any flagged ids
     '''
     summary_img_stats = {}
     for band in img_stats.keys():
