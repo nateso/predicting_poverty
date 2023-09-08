@@ -229,20 +229,48 @@ ggsave('figures/maps/uga_fold_3.png', device = 'png', plot = uga_fold,
 # load the predictions
 preds_df <- read.csv("results/predictions/baseline_preds.csv") %>% 
   left_join(cv_df %>% select(cluster_id, val_fold, lat, lon), by = 'cluster_id') %>% 
+  left_join(lsms_df %>% select(unique_id, start_year), by = 'unique_id') %>% 
   filter(val_fold == 3)
 
 # map the predictions
-preds_map <- ggplot(data = uga_shp_2) +
+preds_map_09 <- ggplot(data = uga_shp_2) +
   geom_sf(fill = 'grey', alpha = 0.3)+
-  geom_point(data = preds_df, aes(x = lon, y = lat, col = y_hat)) +
+  geom_point(data = preds_df %>% filter(start_year == 2009), aes(x = lon, y = lat, col = y_hat)) +
   theme_void() +
   scale_color_viridis(option = 'plasma', 
                       name = 'log pc $/day',
                       guide = 'colourbar')
 
-ggsave('figures/maps/preds_uga_3.png', device = 'png', plot = preds_map,
+preds_map_10 <- ggplot(data = uga_shp_2) +
+  geom_sf(fill = 'grey', alpha = 0.3)+
+  geom_point(data = preds_df %>% filter(start_year == 2010), aes(x = lon, y = lat, col = y_hat)) +
+  theme_void() +
+  scale_color_viridis(option = 'plasma', 
+                      name = 'log pc $/day',
+                      guide = 'colourbar')
+
+
+preds_map_11 <- ggplot(data = uga_shp_2) +
+  geom_sf(fill = 'grey', alpha = 0.3) +
+  geom_point(data = preds_df %>% filter(start_year == 2011), aes(x = lon, y = lat, col = y_hat)) +
+  theme_void() +
+  scale_color_viridis(option = 'plasma', 
+                      name = '',  # Set legend title to empty string
+                      guide = 'colourbar') + 
+  theme(legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.key.size = unit(1, "cm"), # Adjust the width of the legend key
+        legend.key.height = unit(.5, "cm")) +  # Adjust the height of the legend key
+  guides(color = guide_colorbar(title.position = "top")) 
+
+ggsave('figures/maps/preds_uga_3_2009.png', device = 'png', plot = preds_map_09,
        scale = 1, width = 15, height = 15, units = 'cm', dpi = 300)
 
+ggsave('figures/maps/preds_uga_3_2010.png', device = 'png', plot = preds_map_10,
+       scale = 1, width = 15, height = 15, units = 'cm', dpi = 300)
+
+ggsave('figures/maps/preds_uga_3_2011.png', device = 'png', plot = preds_map_11,
+       scale = 1, width = 15, height = 15, units = 'cm', dpi = 300)
 
 #*******************************************************************************
 #### Map bounding boxes ####
