@@ -1,17 +1,23 @@
+import copy
 import os
 import time
-
+import numpy as np
 import matplotlib.pyplot as plt
+import pickle
+
+import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchvision
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
+from .ParamTuner import ParamTuner
 from .SatDataset import SatDataset
 from .Trainer import Evaluator
 from .Trainer import Trainer
-from .torch_helpers import *
-from ..spatial_CV import *
+
+from ..spatial_CV import split_lsms_ids, split_lsms_spatial
 
 
 class CrossValidator():
@@ -36,24 +42,32 @@ class CrossValidator():
         self.target_var = target_var
         self.id_var = id_var
         self.feat_transform_train = feat_transform
-        self.feat_transform_val_test = torchvision.transforms.Compose([feat_transform.transforms[-1]])
+        self.feat_transform_val_test = torchvision.transforms.Compose([feat_transform.transforms[-1]]) # avoids the random rotation and flipping on the test set
         self.target_transform = target_transform
         self.device = device
         self.random_seed = random_seed
         self.model_name = model_name
 
-        self.training_r2 = {'train': [], 'val': []}
-        self.training_mse = {'train': [], 'val': []}
-        self.cv_r2 = []
-        self.cv_mse = []
-        self.predictions = {'unique_id': [], 'y': [], 'y_hat': []}
+        self.res_mse = {'train': [], 'val': []}
+        self.res_r2 = {'train': [], 'val': []}
+        self.predictions = {id_var: [], 'y': [], 'y_hat': []}
         self.best_model_paths = []
 
-    def run_cv(self, hyper_params):
+        # get the fold weights (depending on the size of each fold)
+        self.train_fold_weights = [len(v['train_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
+                                   fold_ids.values()]
+        self.val_fold_weights = [len(v['val_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
+                                 fold_ids.values()]
+
+    def run_cv(self, hyper_params, tune_hyper_params=False):
         start_time = time.time()
 
         for fold, split in tqdm(self.fold_ids.items()):
-            print(f"\nTraining on fold {fold}")
+            print('\n\n\n')
+            print(
+                '=====================================================================================================')
+            print(f"Training on fold {fold}")
+
             if self.model_name is not None:
                 model_fold_name = f"{self.model_name}_f{fold}"
 
@@ -61,50 +75,104 @@ class CrossValidator():
                 np.random.seed(self.random_seed + fold)
                 torch.manual_seed(self.random_seed + fold)
 
-            # prepare the data
+            # prepare the training data
             train_df, val_df, test_df = self.split_data_train_val_test(split['val_ids'])
             train_loader, val_loader, test_loader = self.get_dataloaders(train_df, val_df, test_df,
                                                                          batch_size=hyper_params['batch_size'])
-            # print(val_df.cluster_id)
-            # initialise the weights of the model
-            self.model.load_state_dict(self.orig_state_dict)
 
-            # train model
-            loss_fn = nn.MSELoss()
-            optimiser = optim.Adam(self.model.parameters(), lr=hyper_params['lr'], weight_decay=hyper_params['alpha'])
-            scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=hyper_params['step_size'],
-                                                  gamma=hyper_params['gamma'])
-            trainer = Trainer(self.model, train_loader, val_loader, optimiser, loss_fn,
-                              self.device, scheduler, self.model_name, model_fold_name)
+            # if wished for, tune the hyper-parameters
+            if tune_hyper_params:
+                # reset the model weights
+                self.model.load_state_dict(self.orig_state_dict)
 
-            trainer.run_training(hyper_params['n_epochs'])
+                # initialise the param tuner
+                param_tuner = ParamTuner(self.model, train_loader, val_loader, hyper_params, self.device)
 
-            # store the training results for later
-            self.training_r2['train'].append(trainer.r2['train'])
-            self.training_r2['val'].append(trainer.r2['val'])
-            self.training_mse['train'].append(trainer.mse['train'])
-            self.training_mse['val'].append(trainer.mse['val'])
+                # tune the hyper-parameters
+                param_tuner.grid_search()
 
-            # get the best model
-            trainer.get_best_model()
-            self.best_model_paths.append(trainer.best_model_path)
+                # get the best hyper-parameters
+                best_params = param_tuner.best_params
+            else:
+                best_params = hyper_params
 
-            # use the best model to initialise the evaluator on the test set
-            evaluator = Evaluator(model=self.model, state_dict_pth=trainer.best_model_path,
-                                  test_loader=test_loader, device=self.device)
+            # train the model using the best hyper-parameters
 
-            # save the predictions
-            self.predictions['unique_id'] += split['val_ids']
-            self.predictions['y'] += evaluator.predictions['y']
-            self.predictions['y_hat'] += evaluator.predictions['y_hat']
+            # split data into training and test fold
+            train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=split['val_ids'])
+            train_loader, test_loader = self.get_dataloaders(train_df, test_df, batch_size=hyper_params['batch_size'])
 
-            # store the test results (i.e. the results on that fold)
-            self.cv_r2.append(evaluator.calc_r2())
-            self.cv_mse.append(evaluator.calc_mse())
+            # train the model
+            self.train_fold(train_loader, val_loader, best_params, model_fold_name)
+
+            # evaluate the model on the test set (using the just trained model)
+            self.evaluate_fold(self.best_model_paths[fold], test_loader, split)
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished Cross-validation after {time_elapsed} seconds")
+
+    def train_fold(self, train_loader, params, model_fold_name=None):
+        # initialise the weights of the model
+        self.model.load_state_dict(self.orig_state_dict)
+
+        # train model
+        loss_fn = nn.MSELoss()
+        optimiser = optim.Adam(self.model.parameters(),
+                               lr=params['lr'],
+                               weight_decay=params['alpha'])
+        scheduler = optim.lr_scheduler.StepLR(optimiser,
+                                              step_size=params['step_size'],
+                                              gamma=params['gamma'])
+
+        trainer = Trainer(model=self.model,
+                          train_loader=train_loader,
+                          val_loader=None,
+                          optimiser=optimiser,
+                          loss_fn=loss_fn,
+                          device=self.device,
+                          scheduler=scheduler,
+                          model_folder=self.model_name,
+                          model_name=model_fold_name)
+
+        trainer.run_training(params['n_epochs'])
+
+        # append the model results to the list of results (the results of the last epoch)
+        self.res_mse['train'].append(trainer.mse['train'][-1])
+        self.res_r2['train'].append(trainer.r2['train'][-1])
+
+        # append the model path to the list of best model paths
+        self.best_model_paths.append(trainer.best_model_path)
+
+    def evaluate_fold(self, model_pth, test_loader, split):
+
+        # use the best model to initialise the evaluator on the test set
+        evaluator = Evaluator(model=self.model, state_dict_pth=model_pth,
+                              test_loader=test_loader, device=self.device)
+        evaluator.predict()
+
+        # save the predictions
+        self.predictions[self.id_var] += split['val_ids']
+        self.predictions['y'] += evaluator.predictions['y']
+        self.predictions['y_hat'] += evaluator.predictions['y_hat']
+
+        # store the test results (i.e. the results on that fold)
+        self.res_mse['val'].append(evaluator.calc_mse())
+        self.res_r2['val'].append(evaluator.calc_r2())
+
+    def compute_overall_performance(self, use_fold_weights=True):
+        if use_fold_weights:
+            train_r2 = np.average(self.res_r2['train'], weights=self.val_fold_weights)
+            train_mse = np.average(self.res_mse['train'], weights=self.val_fold_weights)
+            val_r2 = np.average(self.res_r2['val'], weights=self.val_fold_weights)
+            val_mse = np.average(self.res_mse['val'], weights=self.val_fold_weights)
+        else:
+            train_r2 = np.mean(self.res_r2['train'])
+            train_mse = np.mean(self.res_mse['train'])
+            val_r2 = np.mean(self.res_r2['val'])
+            val_mse = np.mean(self.res_mse['val'])
+        performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
+        return performance
 
     def split_data_train_val_test(self, val_ids):
         # split the data into training and test dataframes
@@ -117,14 +185,12 @@ class CrossValidator():
             'val_ids'])  # there is only one fold in train_val_folds
         return train_df, val_df, test_df
 
-    def get_dataloaders(self, train_df, val_df, test_df, batch_size):
-        # initialise the Landsat data
+    def get_dataloaders(self, train_df, val_df, test_df=None, batch_size=128):
+        # initialise the datasets
         dat_train = SatDataset(train_df, self.img_dir, self.data_type, self.target_var, self.id_var,
                                self.feat_transform_train, self.target_transform)
         dat_val = SatDataset(val_df, self.img_dir, self.data_type, self.target_var, self.id_var,
                              self.feat_transform_val_test, self.target_transform)
-        dat_test = SatDataset(test_df, self.img_dir, self.data_type, self.target_var, self.id_var,
-                              self.feat_transform_val_test, self.target_transform)
 
         # initialise the data loader objects
         if self.random_seed is not None:
@@ -133,22 +199,17 @@ class CrossValidator():
             train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=True, generator=generator)
         else:
             train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=True)
+
+        # validation data loader
         val_loader = DataLoader(dat_val, batch_size=batch_size, shuffle=False)
-        test_loader = DataLoader(dat_test, batch_size=batch_size, shuffle=False)
 
-        return train_loader, val_loader, test_loader
-
-    def compute_overall_performance(self, use_fold_weights=True):
-        if use_fold_weights:
-            fold_weights = [len(v['val_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
-                            self.fold_ids.values()]
-            r2 = np.average(self.cv_r2, weights=fold_weights)
-            mse = np.average(self.cv_mse, weights=fold_weights)
-            return {'r2': r2, 'mse': mse}
+        if test_df is not None:
+            dat_test = SatDataset(test_df, self.img_dir, self.data_type, self.target_var, self.id_var,
+                                  self.feat_transform_val_test, self.target_transform)
+            test_loader = DataLoader(dat_test, batch_size=batch_size, shuffle=False)
+            return train_loader, val_loader, test_loader
         else:
-            r2 = np.mean(self.cv_r2)
-            mse = np.mean(self.cv_mse)
-            return {'r2': r2, 'mse': mse}
+            return train_loader, val_loader
 
     def plot_true_vs_preds(self, xlabel="Predicted outcome values", ylabel='True outcome values'):
         # plots the true observations vs the predicted observations
@@ -170,6 +231,6 @@ class CrossValidator():
         with open(pth, 'wb') as f:
             aux = copy.deepcopy(self)
             aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle
-            #aux.feat_transform = None
-            #aux.model = None  # remove the model, the best model is saved somewhere else.
+            # aux.feat_transform = None
+            # aux.model = None  # remove the model, the best model is saved somewhere else.
             pickle.dump(aux, f)
