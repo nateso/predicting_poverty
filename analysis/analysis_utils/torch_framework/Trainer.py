@@ -97,7 +97,7 @@ class Trainer():
         '''
         Wrapper for training and validation
         '''
-        print('Initialising training')
+        print('\t\tInitialising training')
         start_time = time.time()
 
         self.model.to(self.device)
@@ -110,9 +110,9 @@ class Trainer():
             # print the epoch result
             if self.val_loader is not None:
                 print(
-                    f"\tEPOCH {epoch} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f} - Val MSE: {self.mse['val'][-1]:.4f} - Val R2 {self.r2['val'][-1]:.4f}")
+                    f"\t\tEPOCH {epoch} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f} - Val MSE: {self.mse['val'][-1]:.4f} - Val R2 {self.r2['val'][-1]:.4f}")
             else:
-                print(f"\tEPOCH {epoch} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f}")
+                print(f"\t\tEPOCH {epoch} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f}")
 
             # update the learning rate
             if self.scheduler is not None:
@@ -120,17 +120,25 @@ class Trainer():
 
             # save the model's parameters:
             if self.model_name is not None:
+                # save the parameters of the currently best model only if model name provided and validation set used
                 if self.val_loader is not None:
                     # only keep the best model (to reduce memory usage)
                     current_val_r2 = self.r2['val'][-1]
                     best_val_r2 = max(self.r2['val'])
                     if current_val_r2 == best_val_r2:
                         self.save_model_params(suffix='best')
-                else:
-                    self.save_model_params(suffix='last_epoch')
+
+        # if model name provided and no validation set used, save the parameters of the last epoch
+        if self.val_loader is None:
+            if self.model_name is not None:
+                # save model parameters
+                self.save_model_params(suffix='last_epoch')
+                # store the path to the final model
+                self.best_model_path = f"../results/model_checkpoints/{self.model_folder}/{self.model_name}_last_epoch.pth"
+
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
-        print(f"Finished training after {time_elapsed} seconds")
+        print(f"\t\tFinished training after {time_elapsed} seconds")
 
     def save_model_params(self, suffix):
         folder = f'../results/model_checkpoints/{self.model_folder}'
@@ -149,14 +157,24 @@ class Trainer():
         else:
             print("Model not yet trained")
 
+    def return_best_results(self):
+        if self.val_loader is not None:
+            min_loss = np.min(self.mse['val'])
+            min_loss_epoch = np.argmin(self.mse['val']) + 1
+            max_r2 = np.max(self.r2['val'])
+            max_r2_epoch = np.argmax(self.r2['val']) + 1
+            print(f"\t\tLowest loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
+            print(f"\t\tMaximum R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
+            return min_loss, min_loss_epoch, max_r2, max_r2_epoch
+
     def get_best_model(self):
         if len(self.mse['train']) != 0:
             min_loss = np.min(self.mse['val'])
-            min_loss_idx = np.argmin(self.mse['val'])
+            min_loss_epoch = np.argmin(self.mse['val']) + 1
             max_r2 = np.max(self.r2['val'])
-            max_r2_idx = np.argmax(self.r2['val'])
-            print(f"Lowest loss on validation set in epoch {min_loss_idx}: {min_loss:.6f}")
-            print(f"Maximum R2 on validation set in epoch {max_r2_idx}: {max_r2:.6f}")
+            max_r2_epoch = np.argmax(self.r2['val']) + 1
+            print(f"\t\tLowest loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
+            print(f"\t\tMaximum R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
             self.best_model_path = f"../results/model_checkpoints/{self.model_folder}/{self.model_name}_best.pth"
         else:
             print("Model not yet trained")
@@ -190,7 +208,6 @@ class Evaluator():
         self.predictions = {'y': [], 'y_hat': []}
 
         self.load_state_dict()
-        self.predict()
 
     def load_state_dict(self):
         self.model.load_state_dict(torch.load(self.state_dict_pth, map_location=self.device))
@@ -199,9 +216,7 @@ class Evaluator():
         ## takes the model and predicts the values on the test loader
         self.model.to(self.device)
         self.model.eval()
-        y_hat = []
-        y = []
-        print("Predicting values")
+        print("\t\tPredicting values")
         with torch.no_grad():
             for x, t in tqdm(self.test_loader):
                 y_hat = list(self.model(x.to(self.device)).cpu().numpy().squeeze(1))
