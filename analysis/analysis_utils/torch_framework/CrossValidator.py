@@ -14,7 +14,7 @@ from tqdm.auto import tqdm
 
 from .ParamTuner import ParamTuner
 from .SatDataset import SatDataset
-from .Trainer import Evaluator
+from .Evaluator import Evaluator
 from .Trainer import Trainer
 
 from ..spatial_CV import split_lsms_ids, split_lsms_spatial
