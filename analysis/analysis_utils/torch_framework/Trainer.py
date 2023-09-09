@@ -3,7 +3,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
-from tqdm.auto import tqdm
+#from tqdm.auto import tqdm
 import time
 import os
 
@@ -99,7 +99,7 @@ class Trainer():
 
         self.model.to(self.device)
 
-        for epoch in tqdm(range(n_epochs)):
+        for epoch in range(n_epochs):
             self.train()
             if self.val_loader is not None:
                 self.validate()
@@ -107,9 +107,9 @@ class Trainer():
             # print the epoch result
             if self.val_loader is not None:
                 print(
-                    f"\t\tEPOCH {epoch} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f} - Val MSE: {self.mse['val'][-1]:.4f} - Val R2 {self.r2['val'][-1]:.4f}")
+                    f"\t\tEPOCH {epoch+1} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f} - Val MSE: {self.mse['val'][-1]:.4f} - Val R2 {self.r2['val'][-1]:.4f}")
             else:
-                print(f"\t\tEPOCH {epoch} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f}")
+                print(f"\t\tEPOCH {epoch+1} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f}")
 
             # update the learning rate
             if self.scheduler is not None:

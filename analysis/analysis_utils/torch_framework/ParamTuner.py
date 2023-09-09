@@ -30,6 +30,7 @@ class ParamTuner():
         self.device = device
 
     def grid_search(self):
+        print("\tTune Hyper-parameters")
         start_time = time.time()
         # Expand the grid
         # Generate all possible combinations of hyperparameters
@@ -40,10 +41,9 @@ class ParamTuner():
 
         # Loop over all hyperparameter combinations
         for comb_nr, params in enumerate(hyper_param_combs):
-            print('\n\n')
-            print('\t-----------------------------------')
-            print(f'\tCombination {comb_nr + 1} of {len(hyper_param_combs)}  -- Hyperparameters: {params}')
             print('\n')
+            print('\t------------------------------------------------------')
+            print(f'\tCombination {comb_nr + 1} of {len(hyper_param_combs)}  -- Hyperparameters: {params}')
 
             # train the model
             min_loss, min_loss_epoch, max_r2, max_r2_epoch = self.train(params)
@@ -66,8 +66,10 @@ class ParamTuner():
         # get the end time for the fold
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
-        print(f"Best Hyper-parameter combination: {best_index + 1} --- {self.best_params}")
+
+        print("\t------------------------------------------------------")
         print(f"Finished hyper-parameter tuning after {time_elapsed} seconds")
+        print(f"\nBest Hyper-parameter combination: {best_index + 1} --- {self.best_params}")
 
     def train(self, params):
         # initialise the weights of the model

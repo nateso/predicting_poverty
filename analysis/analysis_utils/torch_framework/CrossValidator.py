@@ -63,7 +63,7 @@ class CrossValidator():
         start_time = time.time()
 
         for fold, split in tqdm(self.fold_ids.items()):
-            print('\n\n\n')
+            print('\n')
             print(
                 '=====================================================================================================')
             print(f"Training on fold {fold}")
@@ -78,7 +78,7 @@ class CrossValidator():
             # prepare the training data
             train_df, val_df, test_df = self.split_data_train_val_test(split['val_ids'])
             train_loader, val_loader, test_loader = self.get_dataloaders(train_df, val_df, test_df,
-                                                                         batch_size=hyper_params['batch_size'])
+                                                                         batch_size=hyper_params['batch_size'][0])
 
             # if wished for, tune the hyper-parameters
             if tune_hyper_params:
@@ -94,23 +94,32 @@ class CrossValidator():
                 # get the best hyper-parameters
                 best_params = param_tuner.best_params
             else:
-                best_params = hyper_params
+                # convert all the hyper-parameters to values using list comprehension
+                best_params = {k: v[0] if isinstance(v, list) else v for k, v in hyper_params.items()}
+
 
             # train the model using the best hyper-parameters
+            print("\nTrain the model using the best hyper-parameters")
 
             # split data into training and test fold
             train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=split['val_ids'])
-            train_loader, test_loader = self.get_dataloaders(train_df, test_df, batch_size=hyper_params['batch_size'])
+            train_loader, test_loader = self.get_dataloaders(train_df, test_df, batch_size=best_params['batch_size'])
 
             # train the model
-            self.train_fold(train_loader, val_loader, best_params, model_fold_name)
+            self.train_fold(train_loader, best_params, model_fold_name)
 
             # evaluate the model on the test set (using the just trained model)
             self.evaluate_fold(self.best_model_paths[fold], test_loader, split)
 
+            # print the results of the fold
+            print(f"\nResults of fold {fold}:")
+            print(f"\tTrain MSE: {self.res_mse['train'][-1]}, Val MSE: {self.res_mse['val'][-1]}")
+            print(f"\tTrain R2: {self.res_r2['train'][-1]}, Val R2: {self.res_r2['val'][-1]}")
+
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
-        print(f"Finished Cross-validation after {time_elapsed} seconds")
+        print("="*100)
+        print(f"\nFinished Cross-validation after {time_elapsed} seconds")
 
     def train_fold(self, train_loader, params, model_fold_name=None):
         # initialise the weights of the model

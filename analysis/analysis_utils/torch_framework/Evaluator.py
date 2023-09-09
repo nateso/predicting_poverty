@@ -2,7 +2,7 @@
 import copy
 import numpy as np
 import torch
-from tqdm import tqdm
+#from tqdm import tqdm
 
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
@@ -28,7 +28,7 @@ class Evaluator():
         self.model.eval()
         print("\t\tPredicting values")
         with torch.no_grad():
-            for x, t in tqdm(self.test_loader):
+            for x, t in self.test_loader:
                 y_hat = list(self.model(x.to(self.device)).cpu().numpy().squeeze(1))
                 y = list(t.cpu().numpy().squeeze(1))
                 self.predictions['y'] += y
