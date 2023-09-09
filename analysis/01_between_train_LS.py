@@ -1,22 +1,26 @@
-
-
 # import packages
-import numpy as np
 import pandas as pd
-from torch.utils.data import DataLoader, Dataset
+import torch
+import torchvision
+from torch.utils.data import DataLoader
+from torchvision import transforms
+
+# load the functions to do spatial CV
+from analysis_utils.spatial_CV import split_lsms_spatial
 
 # import the torch_framework package
 from analysis_utils.torch_framework.CrossValidator import CrossValidator
-from analysis_utils.torch_framework.ResNet18 import *
-from analysis_utils.torch_framework.torch_helpers import *
+from analysis_utils.torch_framework.ResNet18 import init_resnet
 from analysis_utils.torch_framework.SatDataset import SatDataset
-from analysis_utils.torch_framework.BetweenModel import BetweenModel
+from analysis_utils.torch_framework.torch_helpers import get_agg_img_stats, get_feat_stats, get_target_stats
+from analysis_utils.torch_framework.torch_helpers import standardise
 
 # load the variable names of the tabular feature data
 from analysis_utils.variable_names import *
 
-# load the functions to do spatial CV
-from analysis_utils.spatial_CV import *
+print("\nHello!")
+print("Initialising Training for the Between Model using Landsat images")
+print("\n")
 
 ####################################################################################################
 # Set the hyper-parameters
@@ -35,7 +39,7 @@ random_seed = 348
 n_folds = 5
 
 # share of data used
-max_obs = 100
+max_obs = 1000000
 
 # Hyper-parameters for the ResNet18 model
 input_channels = 6
@@ -44,17 +48,17 @@ random_weights = False
 
 # set hyper-parameters
 hyper_params = {
-    'lr': 1e-3,
-    'batch_size': 128,
-    'alpha': 1e-2,
-    'step_size': 1,
-    'gamma': 0.96,
-    'n_epochs': 150
+    'lr': [1e-2, 1e-3, 1e-4],
+    'batch_size': [128],
+    'alpha': [1e-1, 1e-2, 1e-3],
+    'step_size': [1],
+    'gamma': [0.96],
+    'n_epochs': [150]
 }
 
 # training device
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-print(f"Training device: {device}")
+print(f"Training device: {device} \n")
 
 ####################################################################################################
 # Set the data paths
@@ -100,6 +104,7 @@ between_x_vars = osm_dist_vars + osm_count_vars + ['avg_precipitation']
 between_df = df[['cluster_id', 'lat', 'lon', 'country', between_target_var] + between_x_vars].drop_duplicates().reset_index(drop = True)
 
 # divide the data into k different folds
+print("Dividing the data into k different folds using spatial CV")
 fold_ids = split_lsms_spatial(lsms_df, n_folds = n_folds, random_seed = random_seed)
 
 # get the image statistics for the Landsat images for each band
@@ -127,13 +132,17 @@ LS_transforms = torchvision.transforms.Compose([
 ####################################################################################################
 # Train the model
 ####################################################################################################
+print("\n\n")
+print("=====================================================================")
+print("Initialise CROSS VALIDATION")
+print("=====================================================================")
 
 # load the data into RAM first
-# this reduces training times by ~60%...
+# this increases training times
 _dat = SatDataset(between_df, LS_median_img_dir, data_type,
                   between_target_var, id_var,
                   LS_transforms, target_transform)
-_loader = DataLoader(_dat, batch_size = hyper_params['batch_size'], shuffle = False)
+_loader = DataLoader(_dat, batch_size = hyper_params['batch_size'][0], shuffle = False)
 _, _ = next(iter(_loader))
 
 # run model training
@@ -153,12 +162,20 @@ ls_cv = CrossValidator(model = ResNet18,
                        random_seed = random_seed)
 
 # run k-fold-cv
-ls_cv.run_cv(hyper_params)
+ls_cv.run_cv(hyper_params, tune_hyper_params=True)
 
 # save the cv object
 ls_cv.save_object(name = cv_object_name)
 
 # output the overall performance of the model
-ls_cv.compute_overall_performance(use_fold_weights = True)
+print("\n")
+print('='*100)
+print('Cross-Validated performance:')
+print('='*100)
+print(ls_cv.compute_overall_performance(use_fold_weights = True))
+
+
+
+
 
 
