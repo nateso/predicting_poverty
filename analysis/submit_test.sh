@@ -5,8 +5,8 @@
 #SBATCH -C scratch                   # ensure that I work on a node that has access to scratch
 #SBATCH --mail-type=all              # send mail when job begins and ends
 #SBATCH --mail-user=n.schmidtott@stud.uni-goettingen.de  # email address
-#SBATCH --output=../slurm_files/slurm-%x.out     # where to write output, %x give job name, %j names job id
-#SBATCH --error=../slurm_files/slurm-%x.err      # where to write slurm error
+#SBATCH --output=./slurm_files/slurm-%x.out     # where to write output, %x give job name, %j names job id
+#SBATCH --error=./slurm_files/slurm-%x.err      # where to write slurm error
 
 module load anaconda3
 module load cuda
