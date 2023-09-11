@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=test  # Job name
-#SBATCH -t 00:10:00                  # estimated time
-#SBATCH -p medium             # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
-#SBATCH -C scratch                   # ensure that I work on a node that has access to scratch
-#SBATCH --mail-type=all              # send mail when job begins and ends
-#SBATCH --mail-user=n.schmidtott@stud.uni-goettingen.de  # email address
+#SBATCH --job-name=test               # Job name
+#SBATCH -t 00:10:00                   # estimated time
+#SBATCH -p gpu                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
+#SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
+#SBATCH --mail-type=all               # send mail when job begins and ends
+#SBATCH --mail-user=nathanael.schmidt-ott@wiwi.uni-goettingen.de  # email address
 #SBATCH --output=./slurm_files/slurm-%x.out     # where to write output, %x give job name, %j names job id
 #SBATCH --error=./slurm_files/slurm-%x.err      # where to write slurm error
 
