@@ -38,7 +38,7 @@ model_name='between_cons_LS'
 cv_object_name='between_cons_LS_cv'
 between_target_var='avg_log_mean_pc_cons_usd_2017'
 
-python -u 01_between_train_LS.py model_name cv_object_name between_target_var
+python -u 01_between_train_LS.py "$model_name" "$cv_object_name$ "$between_target_var"
 
 # add some description at the end to show that training is completed
 echo " "

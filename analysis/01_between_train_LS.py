@@ -33,7 +33,7 @@ if len(sys.argv) != 3:
     print("Please provide the values for the following variables:")
     print("model_name, cv_object_name, between_target_var")
     print("Usage: python my_script.py model_name cv_object_name between_target_var")
-    sys.exit(1)
+    ValueError("Incorrect number of command line arguments")
 
 # get the command line arguments
 model_name = sys.argv[1]
