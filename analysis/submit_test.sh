@@ -28,4 +28,4 @@ python -m torch.utils.collect_env
 nvcc -V
 
 # Run the script:
-python -u train.py
+python -u 99_test_file.py
