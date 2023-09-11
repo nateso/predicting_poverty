@@ -3,6 +3,8 @@ import os
 
 # prints out the training device to check whether GPU is available
 # training device
+print("\n\n")
+print("="*100)
 print("Hi there! This is a test file to check whether GPU is available.")
 print("\n")
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -15,7 +17,7 @@ print('\n')
 # check whether I can access files in the data folder
 
 # set the global file paths
-root_data_dir =" "~/scratch/users/nschmid5/data_analysis/Data"
+root_data_dir ="/scratch/users/nschmid5/data_analysis/Data"
 #root_data_dir = "../../Data"
 
 # the lsms data
@@ -34,5 +36,6 @@ print('\n')
 print("="*100)
 
 print("Over and out!")
+print("\n\n")
 
 
