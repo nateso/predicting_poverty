@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=between_cons_LS               # Job name
-#SBATCH -t 05:00:00                   # estimated time
+#SBATCH --job-name=between_cons_RS               # Job name
+#SBATCH -t 15:00:00                   # estimated time
 #SBATCH -p gpu                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G v100:1              # Add the type of GPU used
 #SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
@@ -34,11 +34,11 @@ echo " "
 
 # Run the script:
 # set the variable names for the script
-model_name='between_cons_LS'
-cv_object_name='between_cons_LS_cv'
-between_target_var='avg_log_mean_pc_cons_usd_2017'
+model_name='between_cons_RS'
+cv_object_name='between_cons_RS_cv'
+target_var='avg_log_mean_pc_cons_usd_2017'
 
-python -u 01_between_train_LS.py "$model_name" "$cv_object_name$ "$between_target_var"
+python -u 02_between_train_RS.py "$model_name" "$cv_object_name" "$target_var"
 
 # add some description at the end to show that training is completed
 echo " "
