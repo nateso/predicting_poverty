@@ -18,6 +18,8 @@ from analysis_utils.torch_framework.torch_helpers import standardise
 # load the variable names of the tabular feature data
 from analysis_utils.variable_names import *
 
+print("\n\n")
+print("="*100)
 print("\nHello!")
 print("Initialising Training for the Between Model using Landsat images")
 print("\n")
@@ -65,7 +67,7 @@ print(f"Training device: {device} \n")
 ####################################################################################################
 
 # set the global file paths
-root_data_dir = "../../Data"
+root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
 
 # the lsms data
 lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
@@ -173,7 +175,9 @@ print('='*100)
 print('Cross-Validated performance:')
 print('='*100)
 print(ls_cv.compute_overall_performance(use_fold_weights = True))
-
+print('\n\n')
+print('='*100)
+print('='*100)
 
 
 
