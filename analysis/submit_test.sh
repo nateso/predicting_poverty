@@ -1,13 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=test  # Job name
 #SBATCH -t 00:10:00                  # estimated time
-#SBATCH -p gpu             # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
-#SBATCH -G A100:1                    # take 1 GPU, see https://www.hlrn.de/doc/display/PUB/GPU+Usage for more options
+#SBATCH -p medium             # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -C scratch                   # ensure that I work on a node that has access to scratch
 #SBATCH --mail-type=all              # send mail when job begins and ends
 #SBATCH --mail-user=n.schmidtott@stud.uni-goettingen.de  # email address
-#SBATCH --output=./slurm_files/slurm-%x-%j.out     # where to write output, %x give job name, %j names job id
-#SBATCH --error=./slurm_files/slurm-%x-%j.err      # where to write slurm error
+#SBATCH --output=./slurm_files/slurm-%x.out     # where to write output, %x give job name, %j names job id
+#SBATCH --error=./slurm_files/slurm-%x.err      # where to write slurm error
 
 module load anaconda3
 module load cuda

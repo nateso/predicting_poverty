@@ -15,7 +15,7 @@ print('\n')
 # check whether I can access files in the data folder
 
 # set the global file paths
-root_data_dir = "../../../scratch/users/nschmid5/data_analysis/Data"
+root_data_dir =" "~/scratch/users/nschmid5/data_analysis/Data"
 #root_data_dir = "../../Data"
 
 # the lsms data
