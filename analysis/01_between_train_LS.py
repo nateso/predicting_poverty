@@ -19,9 +19,8 @@ from analysis_utils.torch_framework.torch_helpers import standardise
 # load the variable names of the tabular feature data
 from analysis_utils.variable_names import *
 
-print("\n\n")
-print("=" * 100)
-print("\nHello!")
+
+print("Hello!")
 print("Initialising Training for the Between Model using Landsat images")
 print("\n")
 
@@ -195,5 +194,4 @@ print('Cross-Validated performance:')
 print('=' * 100)
 print(ls_cv.compute_overall_performance(use_fold_weights=True))
 print('\n\n')
-print('=' * 100)
-print('=' * 100)
+
