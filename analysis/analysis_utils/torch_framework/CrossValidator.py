@@ -115,9 +115,7 @@ class CrossValidator():
             train_loader, test_loader = self.get_dataloaders(train_df, test_df, batch_size=best_params['batch_size'])
 
             # reset the model weights
-            print(f"Fold seed {fold_seed}")
-            # self.model_class.init_weights(random_seed=fold_seed)
-            print(self.model_class.model.conv1.weight[0, 0, 0, :])
+            self.model_class.init_weights(random_seed=fold_seed)
 
             # train the model
             self.train_fold(train_loader, best_params, model_fold_name)
@@ -238,7 +236,6 @@ class CrossValidator():
 
         # initialise the data loader objects
         if self.random_seed is not None:
-            print('doing random seed stuff yihaaa')
             generator = torch.Generator()
             generator.manual_seed(self.random_seed)
             train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=True, generator=generator)

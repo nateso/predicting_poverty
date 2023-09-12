@@ -63,11 +63,6 @@ n_folds = 5
 # share of data used
 max_obs = 1000000
 
-# Hyper-parameters for the ResNet18 model
-input_channels = 6
-ms = True
-random_weights = False
-
 # set hyper-parameters
 hyper_params = {
     'lr': [1e-2, 1e-3, 1e-4],
