@@ -150,9 +150,14 @@ print("=====================================================================")
 
 # load the data into RAM first
 # this increases training times
-_dat = SatDataset(between_df, LS_median_img_dir, data_type,
-                  between_target_var, id_var,
-                  LS_transforms, target_transform)
+_dat = SatDataset(between_df,
+                  LS_median_img_dir,
+                  data_type,
+                  between_target_var,
+                  id_var,
+                  LS_transforms,
+                  target_transform,
+                  random_seed)
 _loader = DataLoader(_dat, batch_size=hyper_params['batch_size'][0], shuffle=False)
 _, _ = next(iter(_loader))
 

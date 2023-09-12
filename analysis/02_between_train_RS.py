@@ -16,10 +16,6 @@ from analysis_utils.torch_framework.SatDataset import SatDataset
 from analysis_utils.torch_framework.torch_helpers import get_agg_img_stats, get_feat_stats, get_target_stats
 from analysis_utils.torch_framework.torch_helpers import standardise
 
-# load the variable names of the tabular feature data
-from analysis_utils.variable_names import *
-
-
 print("Hello!")
 print("Initialising Training for the Between Model using Remote Sensing images")
 print(f"Target variable: {sys.argv[3]}")
@@ -151,9 +147,14 @@ print("=====================================================================")
 
 # load the data into RAM first
 # this increases training times
-_dat = SatDataset(between_df, RS_v2_between_img_dir, data_type,
-                  between_target_var, id_var,
-                  RS_transforms, target_transform)
+_dat = SatDataset(between_df,
+                  RS_v2_between_img_dir,
+                  data_type,
+                  between_target_var,
+                  id_var,
+                  RS_transforms,
+                  target_transform,
+                  random_seed)
 _loader = DataLoader(_dat, batch_size=hyper_params['batch_size'][0], shuffle=False)
 _, _ = next(iter(_loader))
 
