@@ -35,7 +35,7 @@ class CrossValidator():
                  model_name=None,
                  random_seed=None):
 
-        self.model_class = model_class
+        self.model_class = copy.deepcopy(model_class)
 
         self.lsms_df = lsms_df
         self.fold_ids = fold_ids
@@ -46,7 +46,8 @@ class CrossValidator():
         self.id_var = id_var
         self.feat_transform_train = feat_transform
         self.feat_transform_val_test = torchvision.transforms.Compose(
-            [feat_transform.transforms[-1]])  # avoids the random rotation and flipping on the test set
+            [feat_transform.transforms[-1]]  # avoids the random rotation and flipping on the test set
+        )
         self.target_transform = target_transform
         self.device = device
         self.random_seed = random_seed
@@ -75,12 +76,12 @@ class CrossValidator():
             if self.model_name is not None:
                 model_fold_name = f"{self.model_name}_f{fold}"
 
-            if self.random_seed is not None:
+            if self.random_seed is None:
+                fold_seed = None
+            else:
                 fold_seed = self.random_seed + fold
                 np.random.seed(fold_seed)
                 torch.manual_seed(fold_seed)
-            else:
-                fold_seed = None
 
             # prepare the training data
             train_df, val_df, test_df = self.split_data_train_val_test(split['val_ids'])
@@ -114,7 +115,9 @@ class CrossValidator():
             train_loader, test_loader = self.get_dataloaders(train_df, test_df, batch_size=best_params['batch_size'])
 
             # reset the model weights
-            self.model_class.init_weights(random_seed=fold_seed)
+            print(f"Fold seed {fold_seed}")
+            # self.model_class.init_weights(random_seed=fold_seed)
+            print(self.model_class.model.conv1.weight[0, 0, 0, :])
 
             # train the model
             self.train_fold(train_loader, best_params, model_fold_name)
@@ -165,8 +168,10 @@ class CrossValidator():
     def evaluate_fold(self, model_pth, test_loader, split):
 
         # use the best model to initialise the evaluator on the test set
-        evaluator = Evaluator(model=self.model_class.model, state_dict_pth=model_pth,
-                              test_loader=test_loader, device=self.device)
+        evaluator = Evaluator(model=self.model_class.model,
+                              state_dict_pth=model_pth,
+                              test_loader=test_loader,
+                              device=self.device)
         evaluator.predict()
 
         # save the predictions
@@ -198,20 +203,42 @@ class CrossValidator():
 
         # split the training data further into a training and a validation set for hyper-parameter tuning
         # for now just do hyper-parameter tuning using a simple validation set approach
-        train_val_folds = split_lsms_spatial(train_df, test_ratio=0.2, random_seed=self.random_seed, verbose=False)
-        train_df, val_df = split_lsms_ids(train_df, val_ids=train_val_folds[0][
-            'val_ids'])  # there is only one fold in train_val_folds
+        train_val_folds = split_lsms_spatial(train_df,
+                                             test_ratio=0.2,
+                                             random_seed=self.random_seed,
+                                             verbose=False)
+        train_df, val_df = split_lsms_ids(train_df,
+                                          val_ids=train_val_folds[0][
+                                              'val_ids'])  # there is only one fold in train_val_folds
         return train_df, val_df, test_df
 
     def get_dataloaders(self, train_df, val_df, test_df=None, batch_size=128):
         # initialise the datasets
-        dat_train = SatDataset(train_df, self.img_dir, self.data_type, self.target_var, self.id_var,
-                               self.feat_transform_train, self.target_transform)
-        dat_val = SatDataset(val_df, self.img_dir, self.data_type, self.target_var, self.id_var,
-                             self.feat_transform_val_test, self.target_transform)
+        dat_train = SatDataset(
+            labels_df=train_df,
+            img_dir=self.img_dir,
+            data_type=self.data_type,
+            target_var=self.target_var,
+            id_var=self.id_var,
+            feat_transform=self.feat_transform_train,
+            target_transform=self.target_transform,
+            random_seed=self.random_seed
+        )
+
+        dat_val = SatDataset(
+            labels_df=val_df,
+            img_dir=self.img_dir,
+            data_type=self.data_type,
+            target_var=self.target_var,
+            id_var=self.id_var,
+            feat_transform=self.feat_transform_val_test,
+            target_transform=self.target_transform,
+            random_seed=None
+        )
 
         # initialise the data loader objects
         if self.random_seed is not None:
+            print('doing random seed stuff yihaaa')
             generator = torch.Generator()
             generator.manual_seed(self.random_seed)
             train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=True, generator=generator)
