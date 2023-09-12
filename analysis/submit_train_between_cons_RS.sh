@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=between_cons_RS               # Job name
+#SBATCH --job-name=RS_cons_between               # Job name
 #SBATCH -t 20:00:00                   # estimated time
 #SBATCH -p gpu                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G v100:1              # Add the type of GPU used
 #SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
 #SBATCH --mail-type=all               # send mail when job begins and ends
-#SBATCH --mail-user=nathanael.schmidt-ott@wiwi.uni-goettingen.de  # email address
-#SBATCH --output=./slurm_files/slurm-%x.out     # where to write output, %x give job name, %j names job id
-#SBATCH --error=./slurm_files/slurm-%x.err      # where to write slurm error
+#SBATCH --mail-user=nschmid5@uni-goettingen.de  # email address
+#SBATCH --output=./slurm_files/slurm_between_cons_RS.out     # where to write output, %x give job name, %j names job id
+#SBATCH --error=./slurm_files/slurm_between_cons_RS.err      # where to write slurm error
 
 module load anaconda3
 module load cuda
