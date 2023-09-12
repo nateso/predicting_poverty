@@ -1,24 +1,24 @@
 import time
 import numpy as np
-import copy
 from itertools import product
 
 import torch.nn as nn
 import torch.optim as optim
 
 from .Trainer import Trainer
+from .EarlyStopper import EarlyStopper
 
 
 class ParamTuner():
     def __init__(self,
-                 model,
+                 model_class,
                  train_loader,
                  val_loader,
                  hyper_params,
-                 device):
+                 device,
+                 random_seed=None):
 
-        self.model = model
-        self.orig_state_dict = copy.deepcopy(model.state_dict())
+        self.model_class = model_class
 
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -28,6 +28,7 @@ class ParamTuner():
         self.best_params = None
 
         self.device = device
+        self.random_seed = random_seed
 
     def grid_search(self):
         print("\tTune Hyper-parameters")
@@ -44,6 +45,12 @@ class ParamTuner():
             print('\n')
             print('\t------------------------------------------------------')
             print(f'\tCombination {comb_nr + 1} of {len(hyper_param_combs)}  -- Hyperparameters: {params}')
+
+            if not self.random_seed is None:
+                comb_seed = self.random_seed + comb_nr
+
+            # reset the model weights
+            self.model_class.init_weights(random_seed=comb_seed)
 
             # train the model
             min_loss, min_loss_epoch, max_r2, max_r2_epoch = self.train(params)
@@ -72,30 +79,32 @@ class ParamTuner():
         print(f"\nBest Hyper-parameter combination: {best_index + 1} --- {self.best_params}")
 
     def train(self, params):
-        # initialise the weights of the model
-        self.model.load_state_dict(self.orig_state_dict)
-
         # train model
         loss_fn = nn.MSELoss()
 
-        optimiser = optim.Adam(self.model.parameters(),
+        optimiser = optim.Adam(self.model_class.model.parameters(),
                                lr=params['lr'],
                                weight_decay=params['alpha'])
 
         scheduler = optim.lr_scheduler.StepLR(optimiser,
                                               step_size=params['step_size'],
                                               gamma=params['gamma'])
+        if params['patience'] is not None:
+            early_stopper = EarlyStopper(patience=params['patience'])
+        else:
+            early_stopper = None
 
-        trainer = Trainer(self.model,
-                          self.train_loader,
-                          self.val_loader,
-                          optimiser,
-                          loss_fn,
-                          self.device,
-                          scheduler)
+        trainer = Trainer(model=self.model_class.model,
+                          train_loader=self.train_loader,
+                          val_loader=self.val_loader,
+                          optimiser=optimiser,
+                          loss_fn=loss_fn,
+                          device=self.device,
+                          scheduler=scheduler,
+                          early_stopper=early_stopper,
+                          model_folder=None,
+                          model_name=None)
 
         trainer.run_training(params['n_epochs'])
 
         return trainer.return_best_results()
-
-

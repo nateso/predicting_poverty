@@ -9,8 +9,17 @@ import os
 
 
 class Trainer():
-    def __init__(self, model, train_loader, val_loader, optimiser,
-                 loss_fn, device, scheduler=None, model_folder=None, model_name=None):
+    def __init__(self,
+                 model,
+                 train_loader,
+                 val_loader,
+                 optimiser,
+                 loss_fn,
+                 device,
+                 scheduler=None,
+                 early_stopper=None,
+                 model_folder=None,
+                 model_name=None):
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -18,8 +27,10 @@ class Trainer():
         self.loss_fn = loss_fn
         self.device = device
         self.scheduler = scheduler
+        self.early_stopper = early_stopper
         self.model_folder = model_folder
         self.model_name = model_name
+
         self.mse = {'train': [], 'val': []}
         self.r2 = {'train': [], 'val': []}
         self.best_model_path = None
@@ -110,6 +121,19 @@ class Trainer():
                     f"\t\tEPOCH {epoch+1} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f} - Val MSE: {self.mse['val'][-1]:.4f} - Val R2 {self.r2['val'][-1]:.4f}")
             else:
                 print(f"\t\tEPOCH {epoch+1} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f}")
+
+            if self.early_stopper is not None:
+                self.early_stopper.update(
+                    val_loss=self.mse['val'][-1],
+                    val_r2=self.r2['val'][-1]
+                )
+                if self.early_stopper.early_stop:
+                    print('\n')
+                    print(f"\t\tPatience exhausted. Stopping early...")
+                    print(f'\t\tValidation loss {self.early_stopper.best_loss:4f}')
+                    print(f'\t\tValidation R2 {self.early_stopper.best_r2:4f}')
+                    print('\n')
+                    break
 
             # update the learning rate
             if self.scheduler is not None:

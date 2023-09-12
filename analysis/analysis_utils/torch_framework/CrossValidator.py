@@ -21,7 +21,11 @@ from ..spatial_CV import split_lsms_ids, split_lsms_spatial
 
 
 class CrossValidator():
-    def __init__(self, model, lsms_df, fold_ids, img_dir,
+    def __init__(self,
+                 model_class,
+                 lsms_df,
+                 fold_ids,
+                 img_dir,
                  data_type,
                  target_var,
                  id_var,
@@ -31,8 +35,7 @@ class CrossValidator():
                  model_name=None,
                  random_seed=None):
 
-        self.model = model
-        self.orig_state_dict = copy.deepcopy(model.state_dict())
+        self.model_class = model_class
 
         self.lsms_df = lsms_df
         self.fold_ids = fold_ids
@@ -42,7 +45,8 @@ class CrossValidator():
         self.target_var = target_var
         self.id_var = id_var
         self.feat_transform_train = feat_transform
-        self.feat_transform_val_test = torchvision.transforms.Compose([feat_transform.transforms[-1]]) # avoids the random rotation and flipping on the test set
+        self.feat_transform_val_test = torchvision.transforms.Compose(
+            [feat_transform.transforms[-1]])  # avoids the random rotation and flipping on the test set
         self.target_transform = target_transform
         self.device = device
         self.random_seed = random_seed
@@ -72,8 +76,11 @@ class CrossValidator():
                 model_fold_name = f"{self.model_name}_f{fold}"
 
             if self.random_seed is not None:
-                np.random.seed(self.random_seed + fold)
-                torch.manual_seed(self.random_seed + fold)
+                fold_seed = self.random_seed + fold
+                np.random.seed(fold_seed)
+                torch.manual_seed(fold_seed)
+            else:
+                fold_seed = None
 
             # prepare the training data
             train_df, val_df, test_df = self.split_data_train_val_test(split['val_ids'])
@@ -82,11 +89,13 @@ class CrossValidator():
 
             # if wished for, tune the hyper-parameters
             if tune_hyper_params:
-                # reset the model weights
-                self.model.load_state_dict(self.orig_state_dict)
-
                 # initialise the param tuner
-                param_tuner = ParamTuner(self.model, train_loader, val_loader, hyper_params, self.device)
+                param_tuner = ParamTuner(model_class=self.model_class,
+                                         train_loader=train_loader,
+                                         val_loader=val_loader,
+                                         hyper_params=hyper_params,
+                                         device=self.device,
+                                         random_seed=fold_seed)
 
                 # tune the hyper-parameters
                 param_tuner.grid_search()
@@ -97,13 +106,15 @@ class CrossValidator():
                 # convert all the hyper-parameters to values using list comprehension
                 best_params = {k: v[0] if isinstance(v, list) else v for k, v in hyper_params.items()}
 
-
             # train the model using the best hyper-parameters
             print("\nTrain the model using the best hyper-parameters")
 
             # split data into training and test fold
             train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=split['val_ids'])
             train_loader, test_loader = self.get_dataloaders(train_df, test_df, batch_size=best_params['batch_size'])
+
+            # reset the model weights
+            self.model_class.init_weights(random_seed=fold_seed)
 
             # train the model
             self.train_fold(train_loader, best_params, model_fold_name)
@@ -118,29 +129,27 @@ class CrossValidator():
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
-        print("="*100)
+        print("=" * 100)
         print(f"\nFinished Cross-validation after {time_elapsed} seconds")
 
     def train_fold(self, train_loader, params, model_fold_name=None):
-        # initialise the weights of the model
-        self.model.load_state_dict(self.orig_state_dict)
-
         # train model
         loss_fn = nn.MSELoss()
-        optimiser = optim.Adam(self.model.parameters(),
+        optimiser = optim.Adam(self.model_class.model.parameters(),
                                lr=params['lr'],
                                weight_decay=params['alpha'])
         scheduler = optim.lr_scheduler.StepLR(optimiser,
                                               step_size=params['step_size'],
                                               gamma=params['gamma'])
 
-        trainer = Trainer(model=self.model,
+        trainer = Trainer(model=self.model_class.model,
                           train_loader=train_loader,
                           val_loader=None,
                           optimiser=optimiser,
                           loss_fn=loss_fn,
                           device=self.device,
                           scheduler=scheduler,
+                          early_stopper=None,
                           model_folder=self.model_name,
                           model_name=model_fold_name)
 
@@ -156,7 +165,7 @@ class CrossValidator():
     def evaluate_fold(self, model_pth, test_loader, split):
 
         # use the best model to initialise the evaluator on the test set
-        evaluator = Evaluator(model=self.model, state_dict_pth=model_pth,
+        evaluator = Evaluator(model=self.model_class.model, state_dict_pth=model_pth,
                               test_loader=test_loader, device=self.device)
         evaluator.predict()
 
@@ -241,5 +250,4 @@ class CrossValidator():
             aux = copy.deepcopy(self)
             aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle
             # aux.feat_transform = None
-            # aux.model = None  # remove the model, the best model is saved somewhere else.
             pickle.dump(aux, f)
