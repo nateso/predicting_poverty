@@ -11,14 +11,13 @@ from analysis_utils.spatial_CV import split_lsms_spatial
 
 # import the torch_framework package
 from analysis_utils.torch_framework.CrossValidator import CrossValidator
-from analysis_utils.torch_framework.ResNet18 import init_resnet
+from analysis_utils.torch_framework.ResNet18 import ResNet18
 from analysis_utils.torch_framework.SatDataset import SatDataset
 from analysis_utils.torch_framework.torch_helpers import get_agg_img_stats, get_feat_stats, get_target_stats
 from analysis_utils.torch_framework.torch_helpers import standardise
 
 # load the variable names of the tabular feature data
 from analysis_utils.variable_names import *
-
 
 print("Hello!")
 print("Initialising Training for the Between Model using Landsat images")
@@ -76,7 +75,8 @@ hyper_params = {
     'alpha': [1e-1, 1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
-    'n_epochs': [150]
+    'n_epochs': [200],
+    'patience': [40]
 }
 
 # training device
@@ -112,7 +112,8 @@ lsms_df['avg_log_mean_pc_cons_usd_2017'] = lsms_df.groupby('cluster_id')['log_me
 lsms_df['avg_mean_asset_index_yeh'] = lsms_df.groupby('cluster_id')['mean_asset_index_yeh'].transform('mean')
 
 # define the mean cluster dataset
-between_df = lsms_df[['cluster_id', 'lat', 'lon', 'country', between_target_var]].drop_duplicates().reset_index(drop=True)
+between_df = lsms_df[['cluster_id', 'lat', 'lon', 'country', between_target_var]].drop_duplicates().reset_index(
+    drop=True)
 
 # divide the data into k different folds
 print("Dividing the data into k different folds using spatial CV")
@@ -157,22 +158,30 @@ _, _ = next(iter(_loader))
 
 # run model training
 # initialise the model and the CrossValidator object
-ResNet18 = init_resnet(input_channels, ms, random_weights, random_seed=random_seed)
-ls_cv = CrossValidator(model=ResNet18,
-                       lsms_df=between_df,
-                       fold_ids=fold_ids,
-                       img_dir=LS_median_img_dir,
-                       data_type=data_type,
-                       target_var=between_target_var,
-                       id_var=id_var,
-                       feat_transform=LS_transforms,
-                       target_transform=target_transform,
-                       device=device,
-                       model_name=model_name,
-                       random_seed=random_seed)
+resnet18 = ResNet18(
+    input_channels=6,
+    pretrained_weights=True,
+    scaled_weight_init=True,
+    random_seed=random_seed
+)
+
+ls_cv = CrossValidator(
+    model_class=resnet18,
+    lsms_df=between_df,
+    fold_ids=fold_ids,
+    img_dir=LS_median_img_dir,
+    data_type=data_type,
+    target_var=between_target_var,
+    id_var=id_var,
+    feat_transform=LS_transforms,
+    target_transform=target_transform,
+    device=device,
+    model_name=model_name,
+    random_seed=random_seed
+)
 
 # run k-fold-cv
-ls_cv.run_cv(hyper_params, tune_hyper_params=True)
+ls_cv.run_cv(hyper_params=hyper_params, tune_hyper_params=True)
 
 # save the cv object
 ls_cv.save_object(name=cv_object_name)
@@ -184,4 +193,3 @@ print('Cross-Validated performance:')
 print('=' * 100)
 print(ls_cv.compute_overall_performance(use_fold_weights=True))
 print('\n\n')
-
