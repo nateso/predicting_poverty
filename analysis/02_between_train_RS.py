@@ -11,7 +11,7 @@ from analysis_utils.spatial_CV import split_lsms_spatial
 
 # import the torch_framework package
 from analysis_utils.torch_framework.CrossValidator import CrossValidator
-from analysis_utils.torch_framework.ResNet18 import init_resnet
+from analysis_utils.torch_framework.ResNet18 import ResNet18
 from analysis_utils.torch_framework.SatDataset import SatDataset
 from analysis_utils.torch_framework.torch_helpers import get_agg_img_stats, get_feat_stats, get_target_stats
 from analysis_utils.torch_framework.torch_helpers import standardise
@@ -64,11 +64,6 @@ n_folds = 5
 # share of data used
 max_obs = 1000000
 
-# Hyper-parameters for the ResNet18 model
-input_channels = 6
-ms = False
-random_weights = True
-
 # set hyper-parameters
 hyper_params = {
     'lr': [1e-2, 1e-3, 1e-4],
@@ -76,7 +71,8 @@ hyper_params = {
     'alpha': [1e-1, 1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
-    'n_epochs': [150]
+    'n_epochs': [200],
+    'patience': [40]
 }
 
 # training device
@@ -163,31 +159,39 @@ _, _ = next(iter(_loader))
 
 # run model training
 # initialise the model and the CrossValidator object
-ResNet18 = init_resnet(input_channels, ms, random_weights, random_seed=random_seed)
-ls_cv = CrossValidator(model=ResNet18,
-                       lsms_df=between_df,
-                       fold_ids=fold_ids,
-                       img_dir=RS_v2_between_img_dir,
-                       data_type=data_type,
-                       target_var=between_target_var,
-                       id_var=id_var,
-                       feat_transform=RS_transforms,
-                       target_transform=target_transform,
-                       device=device,
-                       model_name=model_name,
-                       random_seed=random_seed)
+resnet18 = ResNet18(
+    input_channels=6,
+    pretrained_weights=False,
+    scaled_weight_init=False,
+    random_seed=random_seed
+)
+
+cv = CrossValidator(
+    model_class=resnet18,
+    lsms_df=between_df,
+    fold_ids=fold_ids,
+    img_dir=RS_v2_between_img_dir,
+    data_type=data_type,
+    target_var=between_target_var,
+    id_var=id_var,
+    feat_transform=RS_transforms,
+    target_transform=target_transform,
+    device=device,
+    model_name=model_name,
+    random_seed=random_seed
+)
 
 # run k-fold-cv
-ls_cv.run_cv(hyper_params, tune_hyper_params=True)
+cv.run_cv(hyper_params=hyper_params, tune_hyper_params=True)
 
 # save the cv object
-ls_cv.save_object(name=cv_object_name)
+cv.save_object(name=cv_object_name)
 
 # output the overall performance of the model
 print("\n")
 print('=' * 100)
 print('Cross-Validated performance:')
 print('=' * 100)
-print(ls_cv.compute_overall_performance(use_fold_weights=True))
+print(cv.compute_overall_performance(use_fold_weights=True))
 print('\n\n')
 
