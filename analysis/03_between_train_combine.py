@@ -115,5 +115,20 @@ between_model.train(
     n_components=hyper_params['n_components']
 )
 
-between_model.compute_overall_performance(use_fold_weights=True)
 between_model.save_object(between_object_name)
+
+
+# output the overall performance of the model
+print("\n")
+print('=' * 100)
+print('Cross-Validated performance:')
+print('=' * 100)
+print(between_model.compute_overall_performance(use_fold_weights=True))
+print('-'*50)
+print('Training Performance per fold')
+for i in range(n_folds):
+    print(f"fold{i}")
+    print(f"\tTrain MSE: {between_model.res_mse['train'][i]} - Train R2: {between_model.res_r2['train'][i]}")
+    print(f"\tTrain MSE: {between_model.res_mse['val'][i]} - Train R2: {between_model.res_r2['val'][i]}")
+print('\n\n')
+print("BYE BYE")

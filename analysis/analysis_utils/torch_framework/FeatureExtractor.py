@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.decomposition import PCA
-from tqdm.auto import tqdm
 
 
 def reduce_dimensions(extracted_feats, n_components):
@@ -15,7 +14,7 @@ def reduce_dimensions(extracted_feats, n_components):
     explained_variance_ratios = pca.explained_variance_ratio_
     total_variance_explained = np.sum(explained_variance_ratios)
 
-    print(f"\tTotal variance explained by first {n_components} components: {total_variance_explained:.4f}")
+    print(f"\t\tTotal variance explained by first {n_components} components: {total_variance_explained:.4f}")
 
     return X_reduced
 
@@ -29,12 +28,12 @@ class FeatureExtractor:
         self.model.fc = nn.Identity()
 
     def extract_feats(self, dat_loader, reduced=True, n_components=50):
-        print('\tExtracting Features')
+        print('\t\tExtracting Features')
         self.model.to(self.device)
         self.model.eval()  # initialise validation mode
         extracted_feats = []
         with torch.no_grad():  # disable gradient tracking
-            for x, _ in tqdm(dat_loader):
+            for x, _ in dat_loader:
                 # forward pass
                 feats = self.model(x.to(self.device))
                 extracted_feats.append(feats.cpu().numpy())

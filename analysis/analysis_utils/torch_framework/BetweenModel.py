@@ -77,6 +77,8 @@ class BetweenModel:
         start_time = time.time()
 
         for fold, splits in tqdm(self.fold_ids.items(), total=len(self.fold_ids)):
+            print('-'*50)
+            print(f"Training and Evaluating on fold {fold}")
             # set the random seed for each fold
             if self.random_seed is not None:
                 np.random.seed(self.random_seed + fold)
@@ -103,15 +105,17 @@ class BetweenModel:
             ls_feat_extractor = FeatureExtractor(ls_model, self.device)
             rs_feat_extractor = FeatureExtractor(rs_model, self.device)
 
-            print("Landsat Feature Extraction - Train, Val\n")
+            print("\tLandsat Feature Extraction - Train")
             ls_train_feats = ls_feat_extractor.extract_feats(ls_train_loader, reduced=True,
                                                              n_components=n_components)
+            print("\tLandsat Feature Extraction - Val")
             ls_val_feats = ls_feat_extractor.extract_feats(ls_val_loader, reduced=True,
                                                            n_components=n_components)
 
-            print("RS Feature Extraction - Train, Val\n")
+            print("\tRS Feature Extraction - Train")
             rs_train_feats = rs_feat_extractor.extract_feats(rs_train_loader, reduced=True,
                                                              n_components=n_components)
+            print("\tRS Feature Extraction - Val")
             rs_val_feats = rs_feat_extractor.extract_feats(rs_val_loader, reduced=True,
                                                            n_components=n_components)
 
@@ -148,7 +152,7 @@ class BetweenModel:
             self.res_r2['train'].append(forest_trainer.r2['train'])
             self.res_mse['train'].append(forest_trainer.mse['train'])
             self.res_r2['val'].append(forest_trainer.r2['val'])
-            self.res_r2['val'].append(forest_trainer.mse['val'])
+            self.res_mse['val'].append(forest_trainer.mse['val'])
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
