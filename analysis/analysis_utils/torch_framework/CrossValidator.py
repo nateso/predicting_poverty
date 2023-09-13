@@ -202,8 +202,8 @@ class CrossValidator():
 
     def compute_overall_performance(self, use_fold_weights=True):
         if use_fold_weights:
-            train_r2 = np.average(self.res_r2['train'], weights=self.train_fold_weights)
-            train_mse = np.average(self.res_mse['train'], weights=self.train_fold_weights)
+            train_r2 = np.average(self.res_r2['train'], weights=self.val_fold_weights)
+            train_mse = np.average(self.res_mse['train'], weights=self.val_fold_weights)
             val_r2 = np.average(self.res_r2['val'], weights=self.val_fold_weights)
             val_mse = np.average(self.res_mse['val'], weights=self.val_fold_weights)
         else:
