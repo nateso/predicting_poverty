@@ -54,19 +54,19 @@ spatial_cv_random_seed = 348
 random_seed = 230897
 
 # set the number of folds for k-fold CV
-n_folds = 2
+n_folds = 5
 
 # share of data used
-max_obs = 100
+max_obs = 10000000
 
 # set hyper-parameters
 hyper_params = {
-    'lr': [1e-2],
+    'lr': [1e-1, 1e-2, 1e-3],
     'batch_size': [128],
-    'alpha': [1e-2],
+    'alpha': [1e-1, 1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
-    'n_epochs': [2],
+    'n_epochs': [200],
     'patience': [50]
 }
 
@@ -79,8 +79,8 @@ print(f"Training device: {device} \n")
 ####################################################################################################
 
 # set the global file paths
-#root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
-root_data_dir = "../../Data"
+root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
+#root_data_dir = "../../Data"
 # the lsms data
 lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
 
