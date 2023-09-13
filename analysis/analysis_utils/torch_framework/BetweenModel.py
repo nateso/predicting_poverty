@@ -17,43 +17,77 @@ def load_cv_object(pth):
         return pickle.load(f)
 
 
+def get_dataloaders(cv_object, train_df, val_df, batch_size):
+    # only take the normalisation from the feature transform
+    feat_transform = torchvision.transforms.Compose([cv_object.feat_transform.transforms[-1]])
+
+    # initialise the Landsat data
+    dat_train = SatDataset(train_df,
+                           cv_object.img_dir,
+                           cv_object.data_type,
+                           cv_object.target_var,
+                           cv_object.id_var,
+                           feat_transform=feat_transform,
+                           target_transform=None)  # no need to transform target variable
+
+    dat_val = SatDataset(val_df,
+                         cv_object.img_dir,
+                         cv_object.data_type,
+                         cv_object.target_var,
+                         cv_object.id_var,
+                         feat_transform=feat_transform,
+                         target_transform=None)  # no need to transform target variable
+
+    train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(dat_val, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader
+
+
 class BetweenModel:
-    def __init__(self, LS_cv_pth, RS_cv_pth, df, target_var, x_vars, fold_ids, device, random_seed = None):
+    def __init__(self,
+                 LS_cv_pth,
+                 RS_cv_pth,
+                 lsms_df,
+                 target_var,
+                 x_vars,
+                 fold_ids,
+                 device,
+                 random_seed=None):
+
         self.cv_ls = load_cv_object(LS_cv_pth)
         self.cv_rs = load_cv_object(RS_cv_pth)
         self.id_var = self.cv_ls.id_var
+        self.lsms_df = lsms_df
         self.target_var = target_var
         self.x_vars = x_vars
-        self.df = df
         self.fold_ids = fold_ids
         self.device = device
         self.random_seed = random_seed
 
-        # get the target transform
-        #self.target_transform = self.get_target_transform()
-
         # initialise the objects to store the results
-        self.r2 = {'train': [], 'val': []}
-        self.mse = {'train': [], 'val': []}
+        self.res_r2 = {'train': [], 'val': []}
+        self.res_mse = {'train': [], 'val': []}
         self.predictions = {self.id_var: [], 'y': [], 'y_hat': []}
         self.models = {}
         self.feat_names = []
 
-    def train(self, min_samples_leaf = 10, n_components = 50):
+    def train(self, min_samples_leaf=10, n_components=50):
         print('Initialising training')
         start_time = time.time()
 
-        for fold, splits in tqdm(self.fold_ids.items(), total = len(self.fold_ids)):
+        for fold, splits in tqdm(self.fold_ids.items(), total=len(self.fold_ids)):
             # set the random seed for each fold
             if self.random_seed is not None:
                 np.random.seed(self.random_seed + fold)
                 torch.manual_seed(self.random_seed + fold)
 
-            # load the best landsat and rs models
+            # load the trained LS model on that fold
             ls_state_dict = self.cv_ls.best_model_paths[fold]
             ls_model = self.cv_ls.model
             ls_model.load_state_dict(torch.load(ls_state_dict, map_location=self.device))
 
+            # load the trained RS model on that fold
             rs_state_dict = self.cv_rs.best_model_paths[fold]
             rs_model = self.cv_rs.model
             rs_model.load_state_dict(torch.load(rs_state_dict, map_location=self.device))
@@ -62,21 +96,24 @@ class BetweenModel:
             train_df, val_df = split_lsms_ids(lsms_df=self.df, val_ids=splits['val_ids'])
 
             # get the train and val loader for the LS and RS images
-            ls_train_loader, ls_val_loader = self.get_dataloaders(self.cv_ls, train_df, val_df, 128)
-            rs_train_loader, rs_val_loader = self.get_dataloaders(self.cv_rs, train_df, val_df, 128)
+            ls_train_loader, ls_val_loader = get_dataloaders(self.cv_ls, train_df, val_df, 128)
+            rs_train_loader, rs_val_loader = get_dataloaders(self.cv_rs, train_df, val_df, 128)
 
             # extract features
             ls_feat_extractor = FeatureExtractor(ls_model, self.device)
             rs_feat_extractor = FeatureExtractor(rs_model, self.device)
 
-            print("Landsat Feature Extraction - Train, Val")
-            ls_train_feats = ls_feat_extractor.extract_feats(ls_train_loader, reduced=True, n_components=n_components)
-            ls_val_feats = ls_feat_extractor.extract_feats(ls_val_loader, reduced=True, n_components=n_components)
+            print("Landsat Feature Extraction - Train, Val\n")
+            ls_train_feats = ls_feat_extractor.extract_feats(ls_train_loader, reduced=True,
+                                                             n_components=n_components)
+            ls_val_feats = ls_feat_extractor.extract_feats(ls_val_loader, reduced=True,
+                                                           n_components=n_components)
 
-            print("RS Feature Extraction - Train, Val")
-            rs_train_feats = rs_feat_extractor.extract_feats(rs_train_loader, reduced=True, n_components=n_components)
-            rs_val_feats = rs_feat_extractor.extract_feats(rs_val_loader, reduced=True, n_components=n_components)
-            print("\n")
+            print("RS Feature Extraction - Train, Val\n")
+            rs_train_feats = rs_feat_extractor.extract_feats(rs_train_loader, reduced=True,
+                                                             n_components=n_components)
+            rs_val_feats = rs_feat_extractor.extract_feats(rs_val_loader, reduced=True,
+                                                           n_components=n_components)
 
             # concatenate the rs feats, the ls feats, the OSM feats and the precip feats
             X_train = np.concatenate([ls_train_feats, rs_train_feats, train_df[self.x_vars].values], axis=1)
@@ -93,6 +130,8 @@ class BetweenModel:
             # train the between model on the concatenated features (Random Forest)
             if self.random_seed is not None:
                 random_seed = self.random_seed + fold
+
+            # initialise the Random Froest trainer
             forest_trainer = rf.Trainer(X_train, y_train, X_val, y_val, random_seed)
             forest_trainer.train(min_samples_leaf=min_samples_leaf)
             forest_trainer.validate()
@@ -106,53 +145,50 @@ class BetweenModel:
             self.predictions['y_hat'] += list(forest_trainer.y_hat_val)
 
             # store the models results
-            self.r2['train'].append(forest_trainer.r2['train'])
-            self.mse['train'].append(forest_trainer.mse['train'])
-            self.r2['val'].append(forest_trainer.r2['val'])
-            self.mse['val'].append(forest_trainer.mse['val'])
+            self.res_r2['train'].append(forest_trainer.r2['train'])
+            self.res_mse['train'].append(forest_trainer.mse['train'])
+            self.res_r2['val'].append(forest_trainer.r2['val'])
+            self.res_r2['val'].append(forest_trainer.mse['val'])
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished training after {time_elapsed} seconds")
 
-    # def get_target_transform(self):
-    #     # get the target transform:
-    #     # get the stats for the target variable
-    #     target_stats = get_target_stats(self.df, self.target_var)
-    #
-    #     # get the data transforms for the target --> is used in the DataLoader object
-    #     target_transform = transforms.Compose([
-    #         torchvision.transforms.Lambda(
-    #             lambda t: standardise(t, target_stats['mean'], target_stats['std'])),
-    #     ])
-    #
-    #     return target_transform
+    def get_fold_weights(self, ids='val_ids'):
+        '''
+        Fold weights differ when running the delta or demeaned model as compared to the between model
+        In the between models, the fold weights are only defined by the number of clusters in each fold
+        In the within model, fold weights are defined by the number of observations in each fold
+        :return:
+        '''
+        n = len(self.lsms_df)
+        weights = []
+        for split in self.fold_ids.values():
+            # subset the lsms df to the clusters in the validation split
+            val_cids = split[ids]
+            mask = self.lsms_df.cluster_id.isin(val_cids)
+            sub_df = self.lsms_df[mask]
+            weights.append(len(sub_df) / n)
+        return weights
 
-    def get_dataloaders(self, cv_object, train_df, val_df, batch_size):
-        # only take the normalisation from the feature transforms
-        feat_transform = torchvision.transforms.Compose([cv_object.feat_transform.transforms[-1]])
-
-        # initialise the Landsat data
-        dat_train = SatDataset(train_df, cv_object.img_dir, cv_object.data_type, cv_object.target_var, cv_object.id_var,
-                               feat_transform = feat_transform, target_transform = None)
-        dat_val = SatDataset(val_df, cv_object.img_dir, cv_object.data_type, cv_object.target_var, cv_object.id_var,
-                             feat_transform = feat_transform, target_transform = None)
-
-        train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=False)
-        val_loader = DataLoader(dat_val, batch_size=batch_size, shuffle=False)
-
-        return train_loader, val_loader
-
-    def compute_overall_performance(self, use_fold_weights = True):
+    def compute_overall_performance(self, use_fold_weights=True):
         if use_fold_weights:
-            fold_weights = [len(v['val_ids'])/(len(v['val_ids']) + len(v['train_ids'])) for v in self.fold_ids.values()]
-            r2 = np.average(self.r2['val'], weights = fold_weights)
-            mse = np.average(self.mse['val'], weights = fold_weights)
-            return {'r2':r2, 'mse':mse}
+            # get the fold weights for training and validation sets
+            train_fold_weights = self.get_fold_weights(ids='train_ids')
+            val_fold_weights = self.get_fold_weights(ids='val_ids')
+
+            # compute the overall performance metrics
+            train_r2 = np.average(self.res_r2['train'], weights=train_fold_weights)
+            train_mse = np.average(self.res_mse['train'], weights=train_fold_weights)
+            val_r2 = np.average(self.res_r2['val'], weights=val_fold_weights)
+            val_mse = np.average(self.res_mse['val'], weights=val_fold_weights)
         else:
-            r2 = np.mean(self.r2['val'])
-            mse = np.mean(self.mse['val'])
-            return {'r2':r2, 'mse':mse}
+            train_r2 = np.mean(self.res_r2['train'])
+            train_mse = np.mean(self.res_mse['train'])
+            val_r2 = np.mean(self.res_r2['val'])
+            val_mse = np.mean(self.res_mse['val'])
+        performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
+        return performance
 
     def get_feature_importance(self):
         # add feature importance
@@ -161,11 +197,11 @@ class BetweenModel:
             if fold > 0:
                 feat_importance = np.vstack([feat_importance, self.models[fold].feature_importances_])
         feat_importance = np.mean(feat_importance, axis=0)
-        importance_df = pd.DataFrame({'importance':feat_importance, 'feature':self.feat_names})
+        importance_df = pd.DataFrame({'importance': feat_importance, 'feature': self.feat_names})
         importance_df = importance_df.sort_values(by='importance', ascending=True)
         return importance_df
 
-    def plot_feature_importance(self, variable_labels:dict = None):
+    def plot_feature_importance(self, variable_labels: dict = None):
         feat_imp = self.get_feature_importance()
         if variable_labels is not None:
             feat_imp['feature'] = [variable_labels[f] for f in self.feat_names]
@@ -182,4 +218,3 @@ class BetweenModel:
         pth = f"{folder}/{name}.pkl"
         with open(pth, 'wb') as f:
             pickle.dump(self, f)
-
