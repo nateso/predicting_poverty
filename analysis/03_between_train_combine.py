@@ -49,7 +49,7 @@ max_obs = 1000000
 # set hyper-parameters
 hyper_params = {
     'min_samples_leaf':10,
-    'n_components':50
+    'n_components':25
 }
 
 # training device
@@ -106,7 +106,7 @@ between_model = BetweenModel(
     x_vars=between_x_vars,
     fold_ids=fold_ids,
     device=device,
-    random_seed=None
+    random_seed=random_seed
 )
 
 # run the between model
