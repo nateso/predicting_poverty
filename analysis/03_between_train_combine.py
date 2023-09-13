@@ -129,6 +129,6 @@ print('Training Performance per fold')
 for i in range(n_folds):
     print(f"fold{i}")
     print(f"\tTrain MSE: {between_model.res_mse['train'][i]} - Train R2: {between_model.res_r2['train'][i]}")
-    print(f"\tTrain MSE: {between_model.res_mse['val'][i]} - Train R2: {between_model.res_r2['val'][i]}")
+    print(f"\tVal MSE: {between_model.res_mse['val'][i]} - Val R2: {between_model.res_r2['val'][i]}")
 print('\n\n')
 print("BYE BYE")

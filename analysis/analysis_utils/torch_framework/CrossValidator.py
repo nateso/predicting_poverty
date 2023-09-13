@@ -291,6 +291,8 @@ class CrossValidator():
         pth = f"{folder}/{name}.pkl"
         with open(pth, 'wb') as f:
             aux = copy.deepcopy(self)
+            # move model to cpu
+            aux.model_class.model.to('cpu')
             aux.target_transform = None  # remove the target transforms as it cannot be saved as pickle
             # aux.feat_transform = None
             pickle.dump(aux, f)

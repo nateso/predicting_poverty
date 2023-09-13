@@ -180,10 +180,6 @@ class BetweenModel:
             # get the fold weights for training and validation sets
             train_fold_weights = self.get_fold_weights(ids='train_ids')
             val_fold_weights = self.get_fold_weights(ids='val_ids')
-            print(f"train_fold_weights - {train_fold_weights}")
-            print(f"val_fold_weights - {val_fold_weights}")
-            print(f"train r2 - {self.res_r2['train']}")
-            print(f"val r2 - {self.res_r2['val']}")
             # compute the overall performance metrics
             train_r2 = np.average(self.res_r2['train'], weights=train_fold_weights)
             train_mse = np.average(self.res_mse['train'], weights=train_fold_weights)
