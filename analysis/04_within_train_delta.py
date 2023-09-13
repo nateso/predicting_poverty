@@ -28,7 +28,7 @@ if len(sys.argv) != 4:
     raise(ValueError("Incorrect number of command line arguments"))
 
 print("Hello!")
-print("Initialising Training for the Between Model using Landsat images")
+print("Initialising Training for the Within model using Remote sensing images")
 print(f"Target variable: {sys.argv[3]}")
 print("This is the delta version of the target variable. Just keeps the same name.")
 print("\n")
@@ -62,7 +62,7 @@ max_obs = 10000000
 # set hyper-parameters
 hyper_params = {
     'lr': [1e-1, 1e-2, 1e-3],
-    'batch_size': [128],
+    'batch_size': [256],
     'alpha': [1e-1, 1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
