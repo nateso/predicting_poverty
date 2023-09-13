@@ -112,7 +112,7 @@ print("Dividing the data into k different folds using spatial CV")
 fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=spatial_cv_random_seed)
 
 # get the image statistics for the Landsat images for each band
-RS_img_stats = get_agg_img_stats(RS_v2_between_stats_pth, between_df, id_var = 'cluster_id')
+RS_img_stats = get_agg_img_stats(RS_v2_between_stats_pth, between_df, id_var=id_var)
 
 # extract the relevant statistics for each band (i.e. the mean, std, min, max) and get them as a list
 RS_feat_stats = get_feat_stats(RS_img_stats)
@@ -163,7 +163,7 @@ _, _ = next(iter(_loader))
 # initialise the model and the CrossValidator object
 resnet18 = ResNet18(
     input_channels=6,
-    pretrained_weights=False,
+    use_pretrained_weights=False,
     scaled_weight_init=False,
     random_seed=random_seed
 )
