@@ -57,12 +57,11 @@ class CrossValidator():
         self.res_r2 = {'train': [], 'val': []}
         self.predictions = {id_var: [], 'y': [], 'y_hat': []}
         self.best_model_paths = []
+        self.best_hyper_params = []
 
         # get the fold weights (depending on the size of each fold)
-        self.train_fold_weights = [len(v['train_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
-                                   fold_ids.values()]
-        self.val_fold_weights = [len(v['val_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
-                                 fold_ids.values()]
+        self.train_fold_weights = self.get_fold_weights(ids='train_ids')
+        self.val_fold_weights = self.get_fold_weights(ids='val_ids')
 
     def run_cv(self, hyper_params, tune_hyper_params=False):
         start_time = time.time()
@@ -107,6 +106,9 @@ class CrossValidator():
                 # convert all the hyper-parameters to values using list comprehension
                 best_params = {k: v[0] if isinstance(v, list) else v for k, v in hyper_params.items()}
 
+            # save the best hyper-parameters
+            self.best_hyper_params.append(best_params)
+
             # train the model using the best hyper-parameters
             print("\nTrain the model using the best hyper-parameters")
 
@@ -125,8 +127,8 @@ class CrossValidator():
 
             # print the results of the fold
             print(f"\nResults of fold {fold}:")
-            print(f"\tTrain MSE: {self.res_mse['train'][-1]}, Val MSE: {self.res_mse['val'][-1]}")
-            print(f"\tTrain R2: {self.res_r2['train'][-1]}, Val R2: {self.res_r2['val'][-1]}")
+            print(f"\tTrain MSE: {self.res_mse['train'][-1]}, Test MSE: {self.res_mse['val'][-1]}")
+            print(f"\tTrain R2: {self.res_r2['train'][-1]}, Test R2: {self.res_r2['val'][-1]}")
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
@@ -181,10 +183,27 @@ class CrossValidator():
         self.res_mse['val'].append(evaluator.calc_mse())
         self.res_r2['val'].append(evaluator.calc_r2())
 
+    def get_fold_weights(self, ids='val_ids'):
+        '''
+        Fold weights differ when running the delta or demeaned model as compared to the between model
+        In the between models, the fold weights are only defined by the number of clusters in each fold
+        In the within model, fold weights are defined by the number of observations in each fold
+        :return:
+        '''
+        n = len(self.lsms_df)
+        weights = []
+        for split in self.fold_ids.values():
+            # subset the lsms df to the clusters in the validation split
+            val_cids = split[ids]
+            mask = self.lsms_df.cluster_id.isin(val_cids)
+            sub_df = self.lsms_df[mask]
+            weights.append(len(sub_df) / n)
+        return weights
+
     def compute_overall_performance(self, use_fold_weights=True):
         if use_fold_weights:
-            train_r2 = np.average(self.res_r2['train'], weights=self.val_fold_weights)
-            train_mse = np.average(self.res_mse['train'], weights=self.val_fold_weights)
+            train_r2 = np.average(self.res_r2['train'], weights=self.train_fold_weights)
+            train_mse = np.average(self.res_mse['train'], weights=self.train_fold_weights)
             val_r2 = np.average(self.res_r2['val'], weights=self.val_fold_weights)
             val_mse = np.average(self.res_mse['val'], weights=self.val_fold_weights)
         else:

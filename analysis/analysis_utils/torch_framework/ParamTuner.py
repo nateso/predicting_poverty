@@ -77,6 +77,7 @@ class ParamTuner():
         print("\t------------------------------------------------------")
         print(f"Finished hyper-parameter tuning after {time_elapsed} seconds")
         print(f"\nBest Hyper-parameter combination: {best_index + 1} --- {self.best_params}")
+        print(f"Val MSE: {np.max(self.results['min_loss']):.4f} - Val R2: {np.max(self.results['max_r2']):.4f}")
 
     def train(self, params):
         # train model

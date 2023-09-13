@@ -155,7 +155,7 @@ class Trainer():
                 # save model parameters
                 self.save_model_params(suffix='last_epoch')
                 # store the path to the final model
-                self.best_model_path = f"../results/model_checkpoints/{self.model_folder}/{self.model_name}_last_epoch.pth"
+                self.best_model_path = f"results/model_checkpoints/{self.model_folder}/{self.model_name}_last_epoch.pth"
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
@@ -196,7 +196,7 @@ class Trainer():
             max_r2_epoch = np.argmax(self.r2['val']) + 1
             print(f"\t\tLowest loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
             print(f"\t\tMaximum R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
-            self.best_model_path = f"../results/model_checkpoints/{self.model_folder}/{self.model_name}_best.pth"
+            self.best_model_path = f"results/model_checkpoints/{self.model_folder}/{self.model_name}_best.pth"
         else:
             print("Model not yet trained")
 

@@ -20,6 +20,13 @@ from analysis_utils.torch_framework.CvEvaluator import CvEvaluator
 # import the helpers to demean the data and get the deltas etc.
 from analysis_utils.analysis_helpers import demean_df, make_delta_df
 
+# check if the number of command line arguments is correct
+if len(sys.argv) != 4:
+    print("Please provide the values for the following variables:")
+    print("model_name, cv_object_name, target_var")
+    print("Usage: python my_script.py model_name cv_object_name target_var")
+    raise(ValueError("Incorrect number of command line arguments"))
+
 print("Hello!")
 print("Initialising Training for the Between Model using Landsat images")
 print(f"Target variable: {sys.argv[3]}")
@@ -29,13 +36,6 @@ print("\n")
 ####################################################################################################
 # Accept the command line arguments
 ####################################################################################################
-
-# check if the number of command line arguments is correct
-if len(sys.argv) != 3:
-    print("Please provide the values for the following variables:")
-    print("model_name, cv_object_name, target_var")
-    print("Usage: python my_script.py model_name cv_object_name target_var")
-    raise ValueError("Incorrect number of command line arguments")
 
 # get the command line arguments
 model_name = sys.argv[1]
@@ -50,23 +50,24 @@ id_var = 'delta_id'
 cv_evaluator_object_name = f"evaluator_demeaned_{cv_object_name}"
 
 # set the random seed
-random_seed = 348
+spatial_cv_random_seed = 348
+random_seed = 230897
 
 # set the number of folds for k-fold CV
-n_folds = 5
+n_folds = 2
 
 # share of data used
-max_obs = 1000000
+max_obs = 100
 
 # set hyper-parameters
 hyper_params = {
-    'lr': [1e-2, 1e-3, 1e-4],
+    'lr': [1e-2],
     'batch_size': [128],
-    'alpha': [1e-1, 1e-2, 1e-3],
+    'alpha': [1e-2],
     'step_size': [1],
     'gamma': [0.96],
-    'n_epochs': [200],
-    'patience': [40]
+    'n_epochs': [2],
+    'patience': [50]
 }
 
 # training device
@@ -78,8 +79,8 @@ print(f"Training device: {device} \n")
 ####################################################################################################
 
 # set the global file paths
-root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
-
+#root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
+root_data_dir = "../../Data"
 # the lsms data
 lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
 
@@ -113,8 +114,8 @@ delta_df = pd.merge(delta_df, cl_df, on='cluster_id', how='left')
 delta_df = pd.concat([delta_df, demeaned_df]).reset_index(drop=True)
 
 # get the fold ids from spatial CV
-print("Dividing the data into k different folds using spatial CV")
-fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=random_seed)
+print("\nDividing the data into k different folds using spatial CV")
+fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=spatial_cv_random_seed)
 
 # extract the image statistics for the demeaned images
 delta_img_stats = get_agg_img_stats(delta_stats_pth, delta_df, id_var='delta_id')
@@ -162,7 +163,7 @@ _, _ = next(iter(_loader))
 # initialise the model and the CrossValidator object
 resnet18 = ResNet18(
     input_channels=4,
-    pretrained_weights=False,
+    use_pretrained_weights=False,
     scaled_weight_init=False,
     random_seed=random_seed
 )
@@ -226,8 +227,9 @@ demeaned_feat_transform = torchvision.transforms.Compose([
 
 # load the CvEvaluator object
 cv_evaluator = CvEvaluator(
-    cv_object_name=cv,
+    cv_object=cv,
     lsms_df=demeaned_df,
+    fold_ids=fold_ids,
     device=device
 )
 
