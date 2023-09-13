@@ -84,12 +84,12 @@ class BetweenModel:
 
             # load the trained LS model on that fold
             ls_state_dict = self.cv_ls.best_model_paths[fold]
-            ls_model = self.cv_ls.model
+            ls_model = self.cv_ls.model_class.model
             ls_model.load_state_dict(torch.load(ls_state_dict, map_location=self.device))
 
             # load the trained RS model on that fold
             rs_state_dict = self.cv_rs.best_model_paths[fold]
-            rs_model = self.cv_rs.model
+            rs_model = self.cv_rs.model_class.model
             rs_model.load_state_dict(torch.load(rs_state_dict, map_location=self.device))
 
             # get the training and validation data for this fold
