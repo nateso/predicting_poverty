@@ -162,7 +162,7 @@ class Trainer():
         print(f"\t\tFinished training after {time_elapsed} seconds")
 
     def save_model_params(self, suffix):
-        folder = f'../results/model_checkpoints/{self.model_folder}'
+        folder = f'results/model_checkpoints/{self.model_folder}'
         if not os.path.isdir(folder):
             os.makedirs(folder)
         checkpoint_pth = f"{folder}/{self.model_name}_{suffix}.pth"

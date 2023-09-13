@@ -2,7 +2,6 @@ import torch
 import os
 import numpy as np
 from torch.utils.data import Dataset
-from PIL import Image
 
 
 class SatDataset(Dataset):
@@ -38,8 +37,9 @@ class SatDataset(Dataset):
         # apply the feature transform
         if self.feat_transform:
             if self.random_seed:
-                torch.manual_seed(self.random_seed)
-                np.random.seed(self.random_seed)
+                idx_seed = self.random_seed + idx
+                torch.manual_seed(idx_seed)
+                np.random.seed(idx_seed)
             image = self.feat_transform(image)
 
         # load the label data

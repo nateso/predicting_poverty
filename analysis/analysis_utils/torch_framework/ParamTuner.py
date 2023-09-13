@@ -46,11 +46,11 @@ class ParamTuner():
             print('\t------------------------------------------------------')
             print(f'\tCombination {comb_nr + 1} of {len(hyper_param_combs)}  -- Hyperparameters: {params}')
 
-            if not self.random_seed is None:
+            if self.random_seed is not None:
                 comb_seed = self.random_seed + comb_nr
 
             # reset the model weights
-            self.model_class.init_weights(random_seed=comb_seed)
+            self.model_class.reset_weights(random_seed=comb_seed)
 
             # train the model
             min_loss, min_loss_epoch, max_r2, max_r2_epoch = self.train(params)

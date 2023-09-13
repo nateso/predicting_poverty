@@ -115,7 +115,7 @@ class CrossValidator():
             train_loader, test_loader = self.get_dataloaders(train_df, test_df, batch_size=best_params['batch_size'])
 
             # reset the model weights
-            self.model_class.init_weights(random_seed=fold_seed)
+            self.model_class.reset_weights(random_seed=fold_seed)
 
             # train the model
             self.train_fold(train_loader, best_params, model_fold_name)
@@ -266,7 +266,7 @@ class CrossValidator():
         plt.show()
 
     def save_object(self, name):
-        folder = f'../results/model_objects'
+        folder = f'results/model_objects'
         if not os.path.isdir(folder):
             os.makedirs(folder)
         pth = f"{folder}/{name}.pkl"

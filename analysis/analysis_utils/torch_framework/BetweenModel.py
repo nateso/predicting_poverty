@@ -176,7 +176,7 @@ class BetweenModel:
         plt.show()
 
     def save_object(self, name):
-        folder = f'../results/model_objects'
+        folder = f'results/model_objects'
         if not os.path.isdir(folder):
             os.makedirs(folder)
         pth = f"{folder}/{name}.pkl"

@@ -80,7 +80,7 @@ class CvEvaluator:
             return {'r2': r2, 'mse': mse}
 
     def save_object(self, name):
-        folder = f'../results/model_objects'
+        folder = f'results/model_objects'
         if not os.path.isdir(folder):
             os.makedirs(folder)
         pth = f"{folder}/{name}.pkl"
