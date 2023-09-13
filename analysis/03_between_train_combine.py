@@ -11,7 +11,8 @@ from analysis_utils.spatial_CV import split_lsms_spatial
 
 # check if the number of command line arguments is correct
 if len(sys.argv) != 5:
-    raise(ValueError(f"{len(sys.argv)} - Incorrect number of command line arguments"))
+    print(len(sys.argv))
+    raise(ValueError("Incorrect number of command line arguments"))
 
 print("Hello!")
 print("Initialising Training for the Between Model - combining LS and RS")
