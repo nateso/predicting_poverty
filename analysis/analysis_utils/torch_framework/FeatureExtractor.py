@@ -21,22 +21,22 @@ def reduce_dimensions(extracted_feats, n_components):
 
 
 class FeatureExtractor:
-    def __init__(self, model_class, device):
-        self.model_class = copy.deepcopy(model_class)
+    def __init__(self, model, device):
+        self.model = copy.deepcopy(model)
         self.device = device
 
         # replace the last layer in the network with an identity to directly output the penultimate layer.
-        self.model_class.model.fc = nn.Identity()
+        self.model.fc = nn.Identity()
 
     def extract_feats(self, dat_loader, reduced=True, n_components=50):
         print('\tExtracting Features')
-        self.model_class.model.to(self.device)
-        self.model_class.model.eval()  # initialise validation mode
+        self.model.to(self.device)
+        self.model.eval()  # initialise validation mode
         extracted_feats = []
         with torch.no_grad():  # disable gradient tracking
             for x, _ in tqdm(dat_loader):
                 # forward pass
-                feats = self.model_class.model(x.to(self.device))
+                feats = self.model(x.to(self.device))
                 extracted_feats.append(feats.cpu().numpy())
         extracted_feats = np.concatenate(extracted_feats, axis=0)
         if reduced:
