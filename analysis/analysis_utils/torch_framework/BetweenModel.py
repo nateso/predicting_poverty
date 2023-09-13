@@ -93,7 +93,7 @@ class BetweenModel:
             rs_model.load_state_dict(torch.load(rs_state_dict, map_location=self.device))
 
             # get the training and validation data for this fold
-            train_df, val_df = split_lsms_ids(lsms_df=self.df, val_ids=splits['val_ids'])
+            train_df, val_df = split_lsms_ids(lsms_df=self.lsms_df, val_ids=splits['val_ids'])
 
             # get the train and val loader for the LS and RS images
             ls_train_loader, ls_val_loader = get_dataloaders(self.cv_ls, train_df, val_df, 128)
