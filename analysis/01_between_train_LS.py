@@ -19,6 +19,13 @@ from analysis_utils.torch_framework.torch_helpers import standardise
 # load the variable names of the tabular feature data
 from analysis_utils.variable_names import *
 
+# check if the number of command line arguments is correct
+if len(sys.argv) != 4:
+    print("Please provide the values for the following variables:")
+    print("model_name, cv_object_name, between_target_var")
+    print("Usage: python my_script.py model_name cv_object_name between_target_var")
+    raise(ValueError(f"{len(sys.argv)} - Incorrect number of command line arguments"))
+
 print("Hello!")
 print("Initialising Training for the Between Model using Landsat images")
 print(f"Target variable: {sys.argv[3]}")
@@ -28,13 +35,6 @@ print("\n")
 # Accept the command line arguments
 ####################################################################################################
 
-# check if the number of command line arguments is correct
-if len(sys.argv) != 3:
-    print("Please provide the values for the following variables:")
-    print("model_name, cv_object_name, between_target_var")
-    print("Usage: python my_script.py model_name cv_object_name between_target_var")
-    ValueError("Incorrect number of command line arguments")
-
 # get the command line arguments
 model_name = sys.argv[1]
 cv_object_name = sys.argv[2]
@@ -43,19 +43,12 @@ between_target_var = sys.argv[3]
 ####################################################################################################
 # Set the hyper-parameters
 ####################################################################################################
-
-# These parameters are set in the command line
-# model name etc to save the model
-# model_name = 'between_cons_LS'
-# cv_object_name = 'between_cons_LS_cv'
-# define the target variable
-# between_target_var = 'avg_log_mean_pc_cons_usd_2017'
-
 data_type = 'LS'
 id_var = 'cluster_id'
 
 # set the random seed
-random_seed = 348
+spatial_cv_random_seed = 348 # this ensures that the validation sets are constant across models
+random_seed = 4309
 
 # set the number of folds for k-fold CV
 n_folds = 5
@@ -65,13 +58,13 @@ max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
-    'lr': [1e-2, 1e-3, 1e-4],
+    'lr': [1e-1, 1e-2, 1e-3],
     'batch_size': [128],
     'alpha': [1e-1, 1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
     'n_epochs': [200],
-    'patience': [40]
+    'patience': [50]
 }
 
 # training device
@@ -84,6 +77,7 @@ print(f"Training device: {device} \n")
 
 # set the global file paths
 root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
+#root_data_dir = "../../Data"
 
 # the lsms data
 lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
@@ -112,7 +106,7 @@ between_df = lsms_df[['cluster_id', 'lat', 'lon', 'country', between_target_var]
 
 # divide the data into k different folds
 print("Dividing the data into k different folds using spatial CV")
-fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=random_seed)
+fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=spatial_cv_random_seed)
 
 # get the image statistics for the Landsat images for each band
 LS_img_stats = get_agg_img_stats(LS_median_stats_pth, between_df, id_var='cluster_id')
@@ -160,7 +154,7 @@ _, _ = next(iter(_loader))
 # initialise the model and the CrossValidator object
 resnet18 = ResNet18(
     input_channels=6,
-    pretrained_weights=True,
+    use_pretrained_weights=True,
     scaled_weight_init=True,
     random_seed=random_seed
 )

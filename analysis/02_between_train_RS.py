@@ -52,7 +52,8 @@ data_type = 'RS_v2'
 id_var = 'cluster_id'
 
 # set the random seed
-random_seed = 348
+spatial_cv_random_seed = 348 # this ensures that the validation sets are constant across models
+random_seed = 49832
 
 # set the number of folds for k-fold CV
 n_folds = 5
@@ -62,13 +63,13 @@ max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
-    'lr': [1e-2, 1e-3, 1e-4],
+    'lr': [1e-1, 1e-2, 1e-3],
     'batch_size': [128],
     'alpha': [1e-1, 1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
     'n_epochs': [200],
-    'patience': [40]
+    'patience': [50]
 }
 
 # training device
@@ -108,7 +109,7 @@ between_df = lsms_df[['cluster_id', 'lat', 'lon', 'country', between_target_var]
 
 # divide the data into k different folds
 print("Dividing the data into k different folds using spatial CV")
-fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=random_seed)
+fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=spatial_cv_random_seed)
 
 # get the image statistics for the Landsat images for each band
 RS_img_stats = get_agg_img_stats(RS_v2_between_stats_pth, between_df, id_var = 'cluster_id')
