@@ -77,8 +77,8 @@ print(f"Training device: {device} \n")
 ####################################################################################################
 
 # set the global file paths
-#root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
-root_data_dir = "../../Data"
+root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
+#root_data_dir = "../../Data"
 
 # the lsms data
 lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
