@@ -19,7 +19,7 @@ def load_cv_object(pth):
 
 def get_dataloaders(cv_object, train_df, val_df, batch_size):
     # only take the normalisation from the feature transform
-    feat_transform = torchvision.transforms.Compose([cv_object.feat_transform.transforms[-1]])
+    feat_transform = cv_object.feat_transform_val_test
 
     # initialise the Landsat data
     dat_train = SatDataset(train_df,
