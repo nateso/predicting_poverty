@@ -13,6 +13,7 @@ root_data_dir = "../../Data"
 sat_img_dir = f"{root_data_dir}/satellite_imgs"
 lsms_path = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
 figures_dir = "../figures/tabular_features"
+
 # static data
 esa_lc_pth = f"{sat_img_dir}/RS_v2/esa_lc_decomp.csv"
 
@@ -28,6 +29,10 @@ rs_v2_mean_imgs_stats_pth = f"{sat_img_dir}/RS_v2/RS_v2_mean_img_stats.pkl"
 # dynamic data
 precip_pth = f"{root_data_dir}/precipitation.csv"
 dynamic_img_stats_pth = f"{sat_img_dir}/RS_v2/RS_v2_dynamic_img_stats.pkl"
+
+# Features of RGB images
+ls_rgb_median_feats_pth = f"{sat_img_dir}/LS/median_rgb_feats.csv"
+ls_rgb_dyn_feats_pth = f"{sat_img_dir}/LS/dyn_rgb_feats.csv"
 
 # set the band name dictionaries
 mean_name_dict = dict(zip(list(range(4)),['nl','ndvi','ndwi_gao','ndwi_mcf']))
@@ -99,6 +104,10 @@ for band, stats in dynamic_img_stats.items():
     band_stats = band_stats.rename(columns={'mean':f'dyn_{band_name}_mean','std':f'dyn_{band_name}_std'})
     dynamic_df = pd.merge(dynamic_df, band_stats, on='unique_id', how='left')
 
+#### load the LAndSAT RGB features
+ls_median_df = pd.read_csv(ls_rgb_median_feats_pth)
+ls_dyn_df = pd.read_csv(ls_rgb_dyn_feats_pth)
+
 #************************************************************
 # Merge the data
 #************************************************************
@@ -109,6 +118,8 @@ feats_df = pd.merge(feats_df, osm_df, on = 'cluster_id', how = 'left')
 feats_df = pd.merge(feats_df, mean_nl_ndvi_ndwi_df, on='cluster_id', how='left')
 feats_df = pd.merge(feats_df, precip_df, on = 'unique_id', how = 'left')
 feats_df = pd.merge(feats_df, dynamic_df, on = 'unique_id', how = 'left')
+feats_df = pd.merge(feats_df, ls_median_df, on = 'cluster_id', how = 'left')
+feats_df = pd.merge(feats_df, ls_dyn_df, on = 'unique_id', how = 'left')
 
 #************************************************************
 # Plot the correlation matrix
