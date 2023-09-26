@@ -24,6 +24,10 @@ analysis/model_results/
 analysis/analysis_utils/torch_framework/__pycache__/
 analysis/analysis_utils/__pycache__/
 
+analysis/99_test_notebook.ipynb
+
+
+
 
 
 
