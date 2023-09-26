@@ -65,7 +65,13 @@ class Trainer():
 
 
 class CrossValidator():
-    def __init__(self, lsms_df, fold_ids, target_var, x_vars, id_var='unique_id', random_seed=None):
+    def __init__(self,
+                 lsms_df,
+                 fold_ids,
+                 target_var,
+                 x_vars,
+                 id_var='unique_id',
+                 random_seed=None):
         self.lsms_df = lsms_df
         self.fold_ids = fold_ids
         self.target_var = target_var
@@ -118,13 +124,42 @@ class CrossValidator():
         if use_fold_weights:
             fold_weights = [len(v['val_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
                             self.fold_ids.values()]
-            r2 = np.average(self.r2['val'], weights=fold_weights)
-            mse = np.average(self.mse['val'], weights=fold_weights)
-            return {'r2': r2, 'mse': mse}
+            train_r2 = np.average(self.r2['train'], weights=fold_weights)
+            train_mse = np.average(self.mse['train'], weights=fold_weights)
+            val_r2 = np.average(self.r2['val'], weights=fold_weights)
+            val_mse = np.average(self.mse['val'], weights=fold_weights)
         else:
-            r2 = np.mean(self.r2['val'])
-            mse = np.mean(self.mse['val'])
-            return {'r2': r2, 'mse': mse}
+            train_r2 = np.mean(self.r2['train'])
+            train_mse = np.mean(self.mse['train'])
+            val_r2 = np.mean(self.r2['val'])
+            val_mse = np.mean(self.mse['val'])
+        performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
+        return performance
+
+    def get_feature_importance(self):
+        feat_imp = []
+        for fold in range(len(self.fold_ids.keys())):
+            feat_imp.append(self.models[fold].feature_importances_)
+
+        mean_feat_imp = pd.DataFrame({
+            'variable_name': self.models[fold].feature_names_in_,
+            'feat_importance': np.mean(np.vstack(feat_imp).T, axis=1)
+        })
+
+        mean_feat_imp = mean_feat_imp.sort_values(by='feat_importance', ascending=True)
+        return mean_feat_imp
+
+    def plot_feature_importance(self, fname=None, varnames=None):
+        feat_imp = self.get_feature_importance()
+        if not varnames:
+            varnames = feat_imp['variable_name']
+        fig, ax = plt.subplots(figsize=(8, 10))
+        plt.barh(y=varnames, width=feat_imp['feat_importance'], height=0.8)
+        ax.set_xlabel("Mean Relative Feature Importance")
+        if fname is not None:
+            pth = f"../figures/results/{fname}"
+            plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
+        plt.show()
 
     def plot_true_vs_preds(self):
         # plots the true observations vs the predicted observations
