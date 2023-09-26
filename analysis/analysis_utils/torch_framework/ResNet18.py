@@ -42,9 +42,8 @@ class ResNet18(nn.Module):
         if self.use_pretrained_weights:
             self.model = torchvision.models.resnet18(weights='DEFAULT')
 
-            if self.scaled_weight_init:
-                # extract the weights of the first layer: (only if you want scaled weight init in the first conv)
-                self.layer1_pretrained_weights = self.model.conv1.weight
+            # extract the weights of the first layer: (only if you want scaled weight init in the first conv)
+            self.layer1_pretrained_weights = self.model.conv1.weight
 
         if not self.use_pretrained_weights:
             self.model = torchvision.models.resnet18(weights=None)
