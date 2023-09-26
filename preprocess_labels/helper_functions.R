@@ -29,6 +29,7 @@ impute_missing_vals <- function(asset_dat){
   
   n_rows_NA <- nrow(asset_dat) - nrow(na.omit(asset_dat))
   print(paste('Number of rows with missing values:',n_rows_NA))
+  print(paste("Share of total rows:",n_rows_NA/nrow(asset_dat)))
   out <- asset_dat %>% 
     left_join(mode_asset_val, by = 'cluster_id', suffix = c("","_NA_fill"))
   for(var in vnames){

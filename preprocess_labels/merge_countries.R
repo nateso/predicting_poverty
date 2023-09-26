@@ -11,6 +11,7 @@ library(labelled)
 library(kableExtra)
 
 rm(list = ls())
+setwd("~/Documents/AngSt/master_thesis/data_analysis/predicting_poverty/preprocess_labels/")
 
 #*******************************************************************************
 #### merge the different datasets together into one single ####
@@ -117,7 +118,7 @@ yeh_assets <- impute_missing_vals(yeh_assets)
 
 # run the PCA to extract the wealth index (Index I)
 pca_yeh <- create_wealth_index(yeh_assets)
-yeh_assets$asset_index <- pca_yeh$asset_index
+yeh_assets$asset_index <- (pca_yeh$asset_index - 0)/sd(pca_yeh$asset_index, na.rm = T)
 
 ### do the same for the more complete asset index (Index II)
 nate_assets <- dat %>% 
@@ -126,7 +127,7 @@ nate_assets <- dat %>%
 nate_assets <- impute_missing_vals(nate_assets)
 
 pca_nate <- create_wealth_index(nate_assets)
-nate_assets$asset_index <- pca_nate$asset_index
+nate_assets$asset_index <- pca_nate$asset_index/sd(pca_nate$asset_index, na.rm = T)
 
 ### store PCA results (wealth index) in the large data
 dat %<>% 
