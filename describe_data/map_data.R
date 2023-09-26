@@ -76,7 +76,7 @@ survey_map <- ggplot(data = survey_shp) +
         legend.margin = margin(-9, 0, 0, 3, "cm"),
         plot.margin = margin(-3,-10,0,-1,'cm'),
         plot.background = element_blank()) +
-  guides(fill = guide_legend(title = 'Years since last survey',
+  guides(fill = guide_legend(title = 'Years since last\nconsumption survey',
                              title.position="top", 
                              title.hjust = 0.5,
                              label.position = "left",
@@ -88,7 +88,7 @@ survey_map <- ggplot(data = survey_shp) +
 survey_map
 
 ggsave('figures/maps/WB_years_since_survey.png', device = 'png', plot = survey_map, scale = 1,
-       width = 15, height = 15, units = 'cm', dpi = 300)
+       width = 15, height = 15, units = 'cm', dpi = 500)
 
 
 
@@ -149,6 +149,138 @@ cntry_map <- ggplot(data = cntry_subset) +
 
 ggsave('figures/maps/training_countries.png', device = 'png', plot = cntry_map,scale = 1, 
         width = 15, height = 12, units = 'cm', dpi = 300)
+
+
+#*******************************************************************************
+#### Map clusters in survey countries ####
+#*******************************************************************************
+
+# create a bounding box to keep only countries close to the sampling areas
+ylims <- c(-18, 15)
+xlims <- c(0, 50)
+box_coords <- tibble(x = xlims, y = ylims) %>% 
+  st_as_sf(coords = c("x", "y")) %>% 
+  st_set_crs(st_crs(africa_boundaries))
+
+bounding_box <- st_bbox(box_coords) %>% st_as_sfc()
+
+# subset the African shapefile with those countries that are close to the sample countries
+cntry_subset <- st_intersection(africa_boundaries, bounding_box) %>% 
+  mutate(sample_country = as.factor(ifelse(ISO_A3 %in% lsms_countries, 1, 0)))
+levels(cntry_subset$sample_country) <- c("No", "Yes")
+
+# The lats and lons and consumption expenditure are stored in the cl_df
+
+# define the color palette to map the base map
+color_palette = c('#E8E9EB', '#2372B6')
+
+# subset the cntry_subset to the sample countries
+sample_sf = cntry_subset %>% filter(sample_country == 'Yes')
+
+cluster_map <- ggplot() +
+  geom_sf(data = cntry_subset, fill = '#BAAA94', color = 'white', size = .2, linetype = 'solid') +
+  geom_sf(data = sample_sf, fill = '#BAAA94', color = "black", size = 0.5, linetype = "solid") +
+  geom_point(
+    data = cl_df, 
+    aes(
+      x = lon, 
+      y = lat,
+      col = mean_pc_cons_usd_2017
+      ),
+    size = .2
+    )+
+  theme_void() +
+  scale_color_viridis(option = 'inferno', limits = c(0,10)) +
+  theme(legend.position = 'bottom',
+        legend.direction = "vertical",
+        legend.justification = "left",
+        legend.spacing.x = unit(.2,'cm'),
+        legend.spacing.y = unit(.4,'cm'),
+        legend.background = element_blank(),
+        legend.box.spacing = unit(-5, "cm"),
+        legend.margin = margin(.2, 0, 0, .2, "cm"), # top, right, bottom, left
+        plot.margin = margin(0,0,0,0,'cm'),
+        plot.background = element_blank()) +
+  guides(color = guide_colorbar(title = 'Daily Consumption\n(2017 int $)',
+                             title.position="top", 
+                             title.hjust = 0.5,
+                             label.position = "left",
+                             label.hjust = 0,
+                             tickwidth = 0,
+                             keywidth = unit(.5, "cm"),
+                             keyheight = unit(.5, "cm")))
+
+cluster_map
+
+ggsave('figures/maps/cluster_map.png', device = 'png', plot = cluster_map,scale = 1, 
+       width = 15, height = 15, units = 'cm', dpi = 300)
+
+
+#*******************************************************************************
+#### Map Number of clusters per district ####
+#*******************************************************************************
+
+uga_shp_2 <- st_read("../Data/geoboundaries/uga_boundaries/UGA_adm2_simplified.geojson")
+
+uga_df <- lsms_df %>% 
+  filter(country == 'uga') %>% 
+  filter(start_year == 2011) %>% 
+  select(cluster_id, lon, lat) %>%
+  distinct(cluster_id, .keep_all = T)
+
+uga_df_sf <- st_as_sf(uga_df, coords = c("lon", "lat"), crs = st_crs(uga_shp_2))
+
+joined_data <- st_join(uga_shp_2, uga_df_sf)
+
+# count the number of clusters in each district
+district_counts <- joined_data %>%
+  filter(!is.na(cluster_id)) %>% 
+  group_by(shapeName) %>%
+  summarize(Observation_Count = n()) %>% 
+  st_drop_geometry()
+
+# merge the count data and bin it
+bin_edges <- c(0, 1, 5, 10, 20, Inf)
+bin_labels <- c("0", "1 to 5", "5 to 10", "10 to 20", "> 20")
+uga_shp_2 %<>% left_join(district_counts, by = 'shapeName') %>% 
+  mutate(Observation_Count = ifelse(is.na(Observation_Count),0, Observation_Count))
+
+uga_shp_2$binned_count <- cut(uga_shp_2$Observation_Count, breaks = bin_edges,
+                              labels= bin_labels, include.lowest = TRUE, 
+                              right = F)
+
+
+# bin the count variable
+color_palette <- c('#808080','#C7DCF0', '#1D92C1','#4293C7', '#2372B6', '#07306B','#1D92C1','#C7DCF0','#2372B6') 
+color_palette <- c('#808080','#C7DCF0','#1D92C1','#2372B6','#07306B', '#9FCBE2', '#4293C7') 
+uga_samples <- ggplot(data = uga_shp_2) +
+  geom_sf(aes(fill = binned_count))+
+  scale_fill_manual(values = color_palette,
+                    guide = 'legend') +
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.justification = "right",
+        legend.spacing.x = unit(0.2,'cm'),
+        legend.background = element_blank(),
+        #legend.box.spacing = unit(-5, "cm"),
+        legend.margin = margin(-2, 5, 0, 3, "cm"),
+        plot.margin = margin(-1.5,1,0,0,'cm'),
+        plot.background = element_blank()) +
+  guides(fill = guide_legend(title = 'Number of clusters per district',
+                             title.position="top", 
+                             title.hjust = 0.5,
+                             label.position = "bottom",
+                             label.hjust = .5,
+                             tickwidth = 0,
+                             keywidth = unit(1, "cm"),
+                             keyheight = unit(.5, "cm")))
+
+uga_samples
+
+ggsave('figures/maps/spatial_coverage_uga.png', device = 'png',
+       plot = uga_samples, scale = 1, 
+       width = 17, height = 17, units = 'cm', dpi = 500)
 
 
 #*******************************************************************************
@@ -273,14 +405,14 @@ ggsave('figures/maps/preds_uga_3_2011.png', device = 'png', plot = preds_map_11,
        scale = 1, width = 15, height = 15, units = 'cm', dpi = 300)
 
 #*******************************************************************************
-#### Map bounding boxes ####
+#### Map Recentered locations boxes ####
 #*******************************************************************************
 
 # select two-three clusters that are close to each other
-sel_cls <- c("uga_3040002", 'uga_3040007', 'uga_3040004', 'uga_3040009' )
+#sel_cls <- c("uga_3040002", 'uga_3040007', 'uga_3040004', 'uga_3040009' )
 #sel_cls <- c('uga_2090018', 'uga_2090029', 'uga_2090026')
 #sel_cls <- c('eth_071801088800101','eth_071801088801001', 'eth_071801088802302')
-#sel_cls <- c('tza_05-03-073-05-012', 'tza_5308321','tza_05-03-083-03-311', 'tza_05-04-011-01-008')
+sel_cls <- c('tza_05-03-073-05-012', 'tza_5308321','tza_05-03-083-03-311', 'tza_05-04-011-01-008')
 sel_cls_df <- cl_df %>% 
   filter(cluster_id %in% sel_cls)
 
@@ -301,26 +433,32 @@ map <- leaflet() %>%
   addTiles() %>%
   addCircleMarkers(data = sel_cls_df,
                    lng = ~lon, lat = ~lat,
-                   color = "#07306B", radius = 2, fill = '#07306B')# %>% 
+                   color = "red", radius = 2, fill = 'red', 
+                   opacity = 1) %>% 
   addCircleMarkers(data = sel_cls_df, 
                    lng = ~lsms_lon, lat = ~lsms_lat,
-                   color = 'black', radius = 2, fill = 'black')
+                   color = 'black', radius = 2, fill = 'black',
+                   opacity = 1)
 
 for(i in 1:length(sel_cls)){
   map <- map %>% 
     addPolygons(data = bboxes[[i]], color = "blue",
-                fillOpacity = .1, opacity = 0.2,weight = 2)
+                fillOpacity = .15, opacity = 0.4,weight = 2)
 }
 
 map <- map %>%
   addLegend(
-    position = "bottomright",
+    position = "topright",
     colors = c("black", "red", "blue"),
-    labels = c("Original Location", "Recentered Location", "Region of Interest"),
-    title = "Legend"
+    labels = c("Original Location", "Recentered Location", "Cluster Grid Cell"),
+    opacity = .8,
+    labFormat = 'factor'
   )
 
-export_png(map, 'figures/maps', 'bounding_boxes_uga')
+
+map
+
+export_png(map, 'figures/maps', 'bounding_boxes_tza')
 
 ##### map a single cluster #####
 

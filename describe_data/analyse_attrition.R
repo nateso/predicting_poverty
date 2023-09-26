@@ -9,7 +9,7 @@ library(stargazer)
 rm(list = ls())
 
 # set the working directory
-root_data_dir = '../Data/lsms/processed/'
+root_data_dir = '../../Data/lsms/processed/'
 
 #*******************************************************************************
 #### Load Data ####
@@ -18,9 +18,8 @@ root_data_dir = '../Data/lsms/processed/'
 # load the lsms data without attrition data
 lsms_df_hh <- read.csv(paste0(root_data_dir,'labels_hh.csv'))
 
-assets <- c("rooms", 'electric', 'phone', 'radio', 'car', 'motorcycle', 'bike', 
-            'watsup_qual', 'toilet_qual', 'floor_qual', 'roof_qual', 'wall_qual',
-            'cooking_fuel_qual')
+assets <- c("rooms", 'electric', 'phone', 'radio', 'car', 
+            'watsup_qual', 'toilet_qual', 'floor_qual')
 
 #*******************************************************************************
 #### No Attrition dataset ####
@@ -56,7 +55,7 @@ attr_df <- do.call(rbind.data.frame, attr_df_list)
 ####  Analyse Attrition ####
 #*******************************************************************************
 # load helper functions for the PCA.
-source("preprocess_labels/helper_functions.R")
+source("../preprocess_labels/helper_functions.R")
 
 # combine the data
 df <- rbind.data.frame(attr_df, no_attr_df)
@@ -74,6 +73,7 @@ asset_df <- df %>%
 pca <- create_wealth_index(asset_df)
 
 df$asset_index <- create_wealth_index(asset_df)$asset_index
+df$asset_index = (df$asset_index - 0)/sd(df$asset_index, na.rm = T)
 
 #...............................................................................
 ### Run regressions
