@@ -87,7 +87,7 @@ sat_img_dir = f"{root_data_dir}/satellite_imgs"
 
 # median LS images at the cluster level
 LS_median_img_dir = f"{sat_img_dir}/LS/LS_rgb_median_cluster"
-LS_median_stats_pth = f"{sat_img_dir}/LS/LS_median_img_stats.pkl"
+LS_median_stats_pth = f"{sat_img_dir}/LS/LS_rgb_median_img_stats.pkl"
 
 ####################################################################################################
 # Load the data
