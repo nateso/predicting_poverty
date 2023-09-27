@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=LS_cons_between               # Job name
-#SBATCH -t 20:00:00                   # estimated time
+#SBATCH -t 10:00:00                   # estimated time
 #SBATCH -p gpu                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G v100:1              # Add the type of GPU used
 #SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
@@ -11,7 +11,7 @@
 
 module load anaconda3
 module load cuda
-source activate dl_env # Or whatever you called your environment.
+source activate dl_env
 
 # Printing out some info.
 echo "Submitting job with sbatch from directory: ${SLURM_SUBMIT_DIR}"

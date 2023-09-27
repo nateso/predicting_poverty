@@ -17,7 +17,7 @@ from analysis_utils.torch_framework.torch_helpers import get_agg_img_stats, get_
 from analysis_utils.torch_framework.torch_helpers import standardise
 
 # load the variable names of the tabular feature data
-from analysis_utils.variable_names import *
+from analysis_utils.flagged_uids import flagged_uids
 
 # check if the number of command line arguments is correct
 if len(sys.argv) != 4:
@@ -58,13 +58,13 @@ max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
-    'lr': [1e-1, 1e-2, 1e-3],
+    'lr': [1e-2, 1e-3],
     'batch_size': [128],
-    'alpha': [1e-1, 1e-2, 1e-3],
+    'alpha': [1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
     'n_epochs': [200],
-    'patience': [60]
+    'patience': [40]
 }
 
 # training device
@@ -86,7 +86,7 @@ lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
 sat_img_dir = f"{root_data_dir}/satellite_imgs"
 
 # median LS images at the cluster level
-LS_median_img_dir = f"{sat_img_dir}/LS/LS_median_cluster"
+LS_median_img_dir = f"{sat_img_dir}/LS/LS_rgb_median_cluster"
 LS_median_stats_pth = f"{sat_img_dir}/LS/LS_median_img_stats.pkl"
 
 ####################################################################################################
@@ -95,6 +95,9 @@ LS_median_stats_pth = f"{sat_img_dir}/LS/LS_median_img_stats.pkl"
 
 # load the LSMS data and the feature data (OSM and precipitation)
 lsms_df = pd.read_csv(lsms_pth).iloc[:max_obs, :]
+
+# exclude all ids that are flagged
+lsms_df = lsms_df[~lsms_df['unique_id'].isin(flagged_uids)].reset_index(drop=True)
 
 # add the mean variable at the cluster level
 lsms_df['avg_log_mean_pc_cons_usd_2017'] = lsms_df.groupby('cluster_id')['log_mean_pc_cons_usd_2017'].transform('mean')
@@ -153,7 +156,7 @@ _, _ = next(iter(_loader))
 # run model training
 # initialise the model and the CrossValidator object
 resnet18 = ResNet18(
-    input_channels=6,
+    input_channels=3,
     use_pretrained_weights=True,
     scaled_weight_init=True,
     random_seed=random_seed
