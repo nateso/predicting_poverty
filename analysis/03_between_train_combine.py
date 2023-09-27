@@ -6,6 +6,9 @@ from analysis_utils.torch_framework.BetweenModel import BetweenModel
 # load the variable names of the tabular feature data
 from analysis_utils.variable_names import *
 
+# load the flagged ids
+from analysis_utils.flagged_uids import flagged_uids
+
 # import the spatial CV function
 from analysis_utils.spatial_CV import split_lsms_spatial
 
@@ -44,16 +47,17 @@ random_seed = 534
 n_folds = 5
 
 # share of data used
-max_obs = 1000000
+max_obs = 200
 
 # set hyper-parameters
 hyper_params = {
-    'min_samples_leaf':10,
+    'min_samples_leaf':5,
     'n_components':25
 }
 
 # training device
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+#device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = torch.device("cpu")
 print(f"Training device: {device} \n")
 
 ####################################################################################################
@@ -76,6 +80,9 @@ feat_data_pth = f"{root_data_dir}/feature_data/tabular_data.csv"
 
 # load the LSMS data and the feature data (OSM and precipitation)
 lsms_df = pd.read_csv(lsms_pth).iloc[:max_obs, :]
+
+# drop the flagged ids
+lsms_df = lsms_df[~lsms_df[id_var].isin(flagged_uids)].reset_index(drop=True)
 
 # add the mean variable at the cluster level
 lsms_df['avg_log_mean_pc_cons_usd_2017'] = lsms_df.groupby('cluster_id')['log_mean_pc_cons_usd_2017'].transform('mean')
