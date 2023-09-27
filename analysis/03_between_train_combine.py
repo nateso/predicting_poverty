@@ -37,7 +37,7 @@ rs_cv_pth = sys.argv[4]
 
 # set id var and x_vars
 id_var = 'cluster_id'
-between_x_vars = osm_dist_vars + osm_count_vars + ['avg_precipitation']
+between_x_vars = osm_dist_vars + osm_count_vars + osm_road_vars + ['avg_precipitation']
 
 # set the random seed
 spatial_cv_random_seed = 348 # this ensures that the validation sets are constant across models
@@ -47,7 +47,7 @@ random_seed = 534
 n_folds = 5
 
 # share of data used
-max_obs = 200
+max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
