@@ -158,7 +158,8 @@ class BetweenModel:
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished training after {time_elapsed} seconds")
 
-    def get_fold_weights(self, ids='val_ids'):
+
+    def get_fold_weights(self):
         '''
         Fold weights differ when running the delta or demeaned model as compared to the between model
         In the between models, the fold weights are only defined by the number of clusters in each fold
@@ -166,52 +167,59 @@ class BetweenModel:
         :return:
         '''
         n = len(self.lsms_df)
-        weights = []
+        val_weights = []
         for split in self.fold_ids.values():
             # subset the lsms df to the clusters in the validation split
-            cids = split[ids]
-            mask = self.lsms_df.cluster_id.isin(cids)
+            val_cids = split['val_ids']
+            mask = self.lsms_df.cluster_id.isin(val_cids)
             sub_df = self.lsms_df[mask]
-            weights.append(len(sub_df) / n)
-        return weights
+            val_weights.append(len(sub_df) / n)
+
+        train_weights = [1 - w for w in val_weights]
+        train_weights = [w / sum(train_weights) for w in train_weights]
+
+        return val_weights, train_weights
 
     def compute_overall_performance(self, use_fold_weights=True):
         if use_fold_weights:
-            # get the fold weights for training and validation sets
-            train_fold_weights = self.get_fold_weights(ids='train_ids')
-            val_fold_weights = self.get_fold_weights(ids='val_ids')
-            # compute the overall performance metrics
-            train_r2 = np.average(self.res_r2['train'], weights=train_fold_weights)
-            train_mse = np.average(self.res_mse['train'], weights=train_fold_weights)
-            val_r2 = np.average(self.res_r2['val'], weights=val_fold_weights)
-            val_mse = np.average(self.res_mse['val'], weights=val_fold_weights)
+            # compute the fold weights
+            val_fold_weights, train_fold_weights = self.get_fold_weights()
+            # compute the weighted average of the performance metrics
+            train_r2 = np.average(self.r2['train'], weights=train_fold_weights)
+            train_mse = np.average(self.mse['train'], weights=train_fold_weights)
+            val_r2 = np.average(self.r2['val'], weights=val_fold_weights)
+            val_mse = np.average(self.mse['val'], weights=val_fold_weights)
         else:
-            train_r2 = np.mean(self.res_r2['train'])
-            train_mse = np.mean(self.res_mse['train'])
-            val_r2 = np.mean(self.res_r2['val'])
-            val_mse = np.mean(self.res_mse['val'])
+            train_r2 = np.mean(self.r2['train'])
+            train_mse = np.mean(self.mse['train'])
+            val_r2 = np.mean(self.r2['val'])
+            val_mse = np.mean(self.mse['val'])
         performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
         return performance
 
     def get_feature_importance(self):
-        # add feature importance
-        feat_importance = self.models[0].feature_importances_
-        for fold in self.models.keys():
-            if fold > 0:
-                feat_importance = np.vstack([feat_importance, self.models[fold].feature_importances_])
-        feat_importance = np.mean(feat_importance, axis=0)
-        importance_df = pd.DataFrame({'importance': feat_importance, 'feature': self.feat_names})
-        importance_df = importance_df.sort_values(by='importance', ascending=True)
-        return importance_df
+        feat_imp = []
+        for fold in range(len(self.fold_ids.keys())):
+            feat_imp.append(self.models[fold].feature_importances_)
 
-    def plot_feature_importance(self, variable_labels: dict = None):
+        mean_feat_imp = pd.DataFrame({
+            'variable_name': self.models[0].feature_names_in_,
+            'feat_importance': np.mean(np.vstack(feat_imp).T, axis=1)
+        })
+
+        mean_feat_imp = mean_feat_imp.sort_values(by='feat_importance', ascending=True)
+        return mean_feat_imp
+
+    def plot_feature_importance(self, fname=None, varnames=None):
         feat_imp = self.get_feature_importance()
-        if variable_labels is not None:
-            feat_imp['feature'] = [variable_labels[f] for f in self.feat_names]
-        plt.figure(figsize=(7, 7))
-        plt.barh(feat_imp['feature'], feat_imp['importance'])
-        plt.ylabel("Feature Importance")
-        plt.xlabel("Relative Feature Importance")
+        if not varnames:
+            varnames = feat_imp['variable_name']
+        fig, ax = plt.subplots(figsize=(8, 10))
+        plt.barh(y=varnames, width=feat_imp['feat_importance'], height=0.8)
+        ax.set_xlabel("Mean Relative Feature Importance")
+        if fname is not None:
+            pth = f"../figures/results/{fname}"
+            plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
         plt.show()
 
     def save_object(self, name):
