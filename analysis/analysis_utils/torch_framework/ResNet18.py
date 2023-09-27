@@ -11,10 +11,13 @@ def init_weights_kaiming(m):
 
 # concatenate the weights for the new input channel
 def init_weights_scaled_l1(pretrained_weights, n_channels):
-    mean_weights = torch.mean(pretrained_weights, axis=1).unsqueeze(1)
-    mean_weights = torch.cat([mean_weights] * (n_channels - 3), dim=1)
-    weights = torch.cat([pretrained_weights, mean_weights], dim=1)
-    weights = weights * 3 / n_channels
+    if n_channels > 3:
+        mean_weights = torch.mean(pretrained_weights, axis=1).unsqueeze(1)
+        mean_weights = torch.cat([mean_weights] * (n_channels - 3), dim=1)
+        weights = torch.cat([pretrained_weights, mean_weights], dim=1)
+        weights = weights * 3 / n_channels
+    else:
+        weights = pretrained_weights
     return weights
 
 
