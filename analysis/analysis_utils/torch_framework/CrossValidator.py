@@ -59,10 +59,6 @@ class CrossValidator():
         self.best_model_paths = []
         self.best_hyper_params = []
 
-        # get the fold weights (depending on the size of each fold)
-        self.train_fold_weights = self.get_fold_weights(ids='train_ids')
-        self.val_fold_weights = self.get_fold_weights(ids='val_ids')
-
     def run_cv(self, hyper_params, tune_hyper_params=False):
         start_time = time.time()
 
@@ -183,7 +179,7 @@ class CrossValidator():
         self.res_mse['val'].append(evaluator.calc_mse())
         self.res_r2['val'].append(evaluator.calc_r2())
 
-    def get_fold_weights(self, ids='val_ids'):
+    def get_fold_weights(self):
         '''
         Fold weights differ when running the delta or demeaned model as compared to the between model
         In the between models, the fold weights are only defined by the number of clusters in each fold
@@ -191,26 +187,33 @@ class CrossValidator():
         :return:
         '''
         n = len(self.lsms_df)
-        weights = []
+        val_weights = []
         for split in self.fold_ids.values():
             # subset the lsms df to the clusters in the validation split
-            val_cids = split[ids]
+            val_cids = split['val_ids']
             mask = self.lsms_df.cluster_id.isin(val_cids)
             sub_df = self.lsms_df[mask]
-            weights.append(len(sub_df) / n)
-        return weights
+            val_weights.append(len(sub_df) / n)
+
+        train_weights = [1 - w for w in val_weights]
+        train_weights = [w / sum(train_weights) for w in train_weights]
+
+        return val_weights, train_weights
 
     def compute_overall_performance(self, use_fold_weights=True):
         if use_fold_weights:
-            train_r2 = np.average(self.res_r2['train'], weights=self.val_fold_weights)
-            train_mse = np.average(self.res_mse['train'], weights=self.val_fold_weights)
-            val_r2 = np.average(self.res_r2['val'], weights=self.val_fold_weights)
-            val_mse = np.average(self.res_mse['val'], weights=self.val_fold_weights)
+            # compute the fold weights
+            val_fold_weights, train_fold_weights = self.get_fold_weights()
+            # compute the weighted average of the performance metrics
+            train_r2 = np.average(self.r2['train'], weights=train_fold_weights)
+            train_mse = np.average(self.mse['train'], weights=train_fold_weights)
+            val_r2 = np.average(self.r2['val'], weights=val_fold_weights)
+            val_mse = np.average(self.mse['val'], weights=val_fold_weights)
         else:
-            train_r2 = np.mean(self.res_r2['train'])
-            train_mse = np.mean(self.res_mse['train'])
-            val_r2 = np.mean(self.res_r2['val'])
-            val_mse = np.mean(self.res_mse['val'])
+            train_r2 = np.mean(self.r2['train'])
+            train_mse = np.mean(self.mse['train'])
+            val_r2 = np.mean(self.r2['val'])
+            val_mse = np.mean(self.mse['val'])
         performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
         return performance
 

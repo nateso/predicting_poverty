@@ -219,5 +219,12 @@ class BetweenModel:
         if not os.path.isdir(folder):
             os.makedirs(folder)
         pth = f"{folder}/{name}.pkl"
+
+        aux = copy.deepcopy(self)
+        # move all models to cpu
+        aux.cv_ls.model_class.model.to('cpu')
+        aux.cv_rs.model_class.model.to('cpu')
+
+        # aux.feat_transform = None
         with open(pth, 'wb') as f:
-            pickle.dump(self, f)
+            pickle.dump(aux, f)
