@@ -120,14 +120,30 @@ class CrossValidator():
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished training after {time_elapsed} seconds")
 
+    def get_fold_weights(self):
+        n = len(self.lsms_df)
+        val_weights = []
+        for split in self.fold_ids.values():
+            # subset the lsms df to the clusters in the validation split
+            val_cids = split['val_ids']
+            mask = self.lsms_df.cluster_id.isin(val_cids)
+            sub_df = self.lsms_df[mask]
+            val_weights.append(len(sub_df) / n)
+
+        train_weights = [1 - w for w in val_weights]
+        train_weights = [w / sum(train_weights) for w in train_weights]
+
+        return val_weights, train_weights
+
     def compute_overall_performance(self, use_fold_weights=True):
         if use_fold_weights:
-            fold_weights = [len(v['val_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
-                            self.fold_ids.values()]
-            train_r2 = np.average(self.r2['train'], weights=fold_weights)
-            train_mse = np.average(self.mse['train'], weights=fold_weights)
-            val_r2 = np.average(self.r2['val'], weights=fold_weights)
-            val_mse = np.average(self.mse['val'], weights=fold_weights)
+            # compute the fold weights
+            val_fold_weights, train_fold_weights = self.get_fold_weights()
+            # compute the weighted average of the performance metrics
+            train_r2 = np.average(self.r2['train'], weights=train_fold_weights)
+            train_mse = np.average(self.mse['train'], weights=train_fold_weights)
+            val_r2 = np.average(self.r2['val'], weights=val_fold_weights)
+            val_mse = np.average(self.mse['val'], weights=val_fold_weights)
         else:
             train_r2 = np.mean(self.r2['train'])
             train_mse = np.mean(self.mse['train'])
