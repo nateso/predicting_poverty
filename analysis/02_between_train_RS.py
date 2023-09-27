@@ -16,6 +16,8 @@ from analysis_utils.torch_framework.SatDataset import SatDataset
 from analysis_utils.torch_framework.torch_helpers import get_agg_img_stats, get_feat_stats, get_target_stats
 from analysis_utils.torch_framework.torch_helpers import standardise
 
+from analysis_utils.flagged_uids import flagged_uids
+
 print("Hello!")
 print("Initialising Training for the Between Model using Remote Sensing images")
 print(f"Target variable: {sys.argv[3]}")
@@ -63,13 +65,13 @@ max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
-    'lr': [1e-1, 1e-2, 1e-3],
+    'lr': [1e-2, 1e-3],
     'batch_size': [128],
-    'alpha': [1e-1, 1e-2, 1e-3],
+    'alpha': [1e-2, 1e-3],
     'step_size': [1],
     'gamma': [0.96],
     'n_epochs': [200],
-    'patience': [60]
+    'patience': [40]
 }
 
 # training device
@@ -99,6 +101,9 @@ RS_v2_between_stats_pth = f"{sat_img_dir}/RS_v2/RS_v2_between_img_stats.pkl"
 
 # load the LSMS data and the feature data (OSM and precipitation)
 lsms_df = pd.read_csv(lsms_pth).iloc[:max_obs, :]
+
+# exclude all ids that are flagged
+lsms_df = lsms_df[~lsms_df['unique_id'].isin(flagged_uids)].reset_index(drop=True)
 
 # add the mean variable at the cluster level
 lsms_df['avg_log_mean_pc_cons_usd_2017'] = lsms_df.groupby('cluster_id')['log_mean_pc_cons_usd_2017'].transform('mean')
