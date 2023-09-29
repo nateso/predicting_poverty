@@ -13,6 +13,8 @@ from analysis_utils.flagged_uids import flagged_uids
 from analysis_utils.spatial_CV import split_lsms_spatial
 
 # check if the number of command line arguments is correct
+from analysis_utils.analysis_helpers import standardise_df
+
 if len(sys.argv) != 5:
     print(len(sys.argv))
     raise(ValueError("Incorrect number of command line arguments"))
@@ -51,13 +53,13 @@ max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
-    'min_samples_leaf':5,
+    'min_samples_leaf':1,
     'n_components':25
 }
 
 # training device
-#device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-device = torch.device("cpu")
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+#device = torch.device("cpu")
 print(f"Training device: {device} \n")
 
 ####################################################################################################
@@ -97,6 +99,7 @@ df = pd.merge(lsms_df, feat_df, on = ('unique_id','cluster_id'), how = 'left')
 # define the between dataset
 variables = ['cluster_id', 'lat', 'lon', 'country', between_target_var] + between_x_vars
 between_df = df[variables].drop_duplicates().reset_index(drop=True)
+between_df_norm = standardise_df(between_df, exclude_cols=[between_target_var])
 
 # divide the data into k different folds
 print("Dividing the data into k different folds using spatial CV")
@@ -108,7 +111,7 @@ fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=spatial_cv_r
 between_model = BetweenModel(
     LS_cv_pth=ls_cv_pth,
     RS_cv_pth=rs_cv_pth,
-    lsms_df=between_df,
+    lsms_df=between_df_norm,
     target_var=between_target_var,
     x_vars=between_x_vars,
     fold_ids=fold_ids,
