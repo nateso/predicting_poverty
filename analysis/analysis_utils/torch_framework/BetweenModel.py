@@ -17,31 +17,22 @@ def load_cv_object(pth):
         return pickle.load(f)
 
 
-def get_dataloaders(cv_object, train_df, val_df, batch_size):
+def get_dataloader(cv_object, df, batch_size):
     # only take the normalisation from the feature transform
     feat_transform = cv_object.feat_transform_val_test
 
     # initialise the Landsat data
-    dat_train = SatDataset(train_df,
-                           cv_object.img_dir,
-                           cv_object.data_type,
-                           cv_object.target_var,
-                           cv_object.id_var,
-                           feat_transform=feat_transform,
-                           target_transform=None)  # no need to transform target variable
+    dat = SatDataset(df,
+                     cv_object.img_dir,
+                     cv_object.data_type,
+                     cv_object.target_var,
+                     cv_object.id_var,
+                     feat_transform=feat_transform,
+                     target_transform=None)  # no need to transform target variable
 
-    dat_val = SatDataset(val_df,
-                         cv_object.img_dir,
-                         cv_object.data_type,
-                         cv_object.target_var,
-                         cv_object.id_var,
-                         feat_transform=feat_transform,
-                         target_transform=None)  # no need to transform target variable
+    dat_loader = DataLoader(dat, batch_size=batch_size, shuffle=False)
 
-    train_loader = DataLoader(dat_train, batch_size=batch_size, shuffle=False)
-    val_loader = DataLoader(dat_val, batch_size=batch_size, shuffle=False)
-
-    return train_loader, val_loader
+    return dat_loader
 
 
 class BetweenModel:
@@ -68,6 +59,8 @@ class BetweenModel:
         # initialise the objects to store the results
         self.res_r2 = {'train': [], 'val': []}
         self.res_mse = {'train': [], 'val': []}
+        self.ls_r2 = self.cv_ls.res_r2
+        self.rs_r2 = self.cv_rs.res_r2
         self.predictions = {self.id_var: [], 'y': [], 'y_hat': []}
         self.models = {}
         self.feat_names = []
@@ -77,7 +70,7 @@ class BetweenModel:
         start_time = time.time()
 
         for fold, splits in tqdm(self.fold_ids.items(), total=len(self.fold_ids)):
-            print('-'*50)
+            print('-' * 50)
             print(f"Training and Evaluating on fold {fold}")
             # set the random seed for each fold
             if self.random_seed is not None:
@@ -94,40 +87,34 @@ class BetweenModel:
             rs_model = self.cv_rs.model_class.model
             rs_model.load_state_dict(torch.load(rs_state_dict, map_location=self.device))
 
-            # get the training and validation data for this fold
-            train_df, val_df = split_lsms_ids(lsms_df=self.lsms_df, val_ids=splits['val_ids'])
-
-            # get the train and val loader for the LS and RS images
-            ls_train_loader, ls_val_loader = get_dataloaders(self.cv_ls, train_df, val_df, 128)
-            rs_train_loader, rs_val_loader = get_dataloaders(self.cv_rs, train_df, val_df, 128)
+            # get data loaders for the LS and RS images
+            ls_loader = get_dataloader(self.cv_ls, self.lsms_df, 128)
+            rs_loader = get_dataloader(self.cv_rs, self.lsms_df, 128)
 
             # extract features
             ls_feat_extractor = FeatureExtractor(ls_model, self.device)
             rs_feat_extractor = FeatureExtractor(rs_model, self.device)
 
-            print("\tLandsat Feature Extraction - Train")
-            ls_train_feats = ls_feat_extractor.extract_feats(ls_train_loader, reduced=True,
-                                                             n_components=n_components)
-            print("\tLandsat Feature Extraction - Val")
-            ls_val_feats = ls_feat_extractor.extract_feats(ls_val_loader, reduced=True,
-                                                           n_components=n_components)
+            print("\tLandsat Feature Extraction")
+            ls_feats = ls_feat_extractor.extract_feats(ls_loader, reduced=True, n_components=n_components)
+            print("\tRS Feature Extraction")
+            rs_feats = rs_feat_extractor.extract_feats(rs_loader, reduced=True, n_components=n_components)
 
-            print("\tRS Feature Extraction - Train")
-            rs_train_feats = rs_feat_extractor.extract_feats(rs_train_loader, reduced=True,
-                                                             n_components=n_components)
-            print("\tRS Feature Extraction - Val")
-            rs_val_feats = rs_feat_extractor.extract_feats(rs_val_loader, reduced=True,
-                                                           n_components=n_components)
+            # set the variable names for the extracted features
+            ls_feat_names = ["ls_feat_" + str(i) for i in range(ls_feats.shape[1])]
+            rs_feat_names = ["rs_feat_" + str(i) for i in range(rs_feats.shape[1])]
 
-            # concatenate the rs feats, the ls feats, the OSM feats and the precip feats
-            X_train = np.concatenate([ls_train_feats, rs_train_feats, train_df[self.x_vars].values], axis=1)
-            X_val = np.concatenate([ls_val_feats, rs_val_feats, val_df[self.x_vars].values], axis=1)
-
-            # store the feature names
-            ls_feat_names = ["ls_feat_" + str(i) for i in range(ls_train_feats.shape[1])]
-            rs_feat_names = ["rs_feat_" + str(i) for i in range(rs_train_feats.shape[1])]
+            # append the features to the lsms_df
+            self.lsms_df = pd.concat([self.lsms_df, pd.DataFrame(ls_feats, columns=ls_feat_names)], axis=1)
+            self.lsms_df = pd.concat([self.lsms_df, pd.DataFrame(rs_feats, columns=rs_feat_names)], axis=1)
             self.feat_names = ls_feat_names + rs_feat_names + self.x_vars
 
+            # get the training and validation data for this fold
+            train_df, val_df = split_lsms_ids(lsms_df=self.lsms_df, val_ids=splits['val_ids'])
+
+            # get the X and y data
+            X_train = train_df[self.feat_names].values
+            X_val = val_df[self.feat_names].values
             y_train = train_df[self.target_var].values
             y_val = val_df[self.target_var].values
 
@@ -135,7 +122,7 @@ class BetweenModel:
             if self.random_seed is not None:
                 random_seed = self.random_seed + fold
 
-            # initialise the Random Froest trainer
+            # initialise the Random Forest trainer
             forest_trainer = rf.Trainer(X_train, y_train, X_val, y_val, random_seed)
             forest_trainer.train(min_samples_leaf=min_samples_leaf)
             forest_trainer.validate()
@@ -157,7 +144,6 @@ class BetweenModel:
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished training after {time_elapsed} seconds")
-
 
     def get_fold_weights(self):
         '''
@@ -218,8 +204,7 @@ class BetweenModel:
         plt.barh(y=varnames, width=feat_imp['feat_importance'], height=0.8)
         ax.set_xlabel("Mean Relative Feature Importance")
         if fname is not None:
-            pth = f"../figures/results/{fname}"
-            plt.savefig(pth, dpi=300, bbox_inches='tight', pad_inches=0)
+            plt.savefig(fname, dpi=300, bbox_inches='tight', pad_inches=0)
         plt.show()
 
     def save_object(self, name):
@@ -229,9 +214,11 @@ class BetweenModel:
         pth = f"{folder}/{name}.pkl"
 
         aux = copy.deepcopy(self)
-        # move all models to cpu
-        aux.cv_ls.model_class.model.to('cpu')
-        aux.cv_rs.model_class.model.to('cpu')
+
+        # remove the model objects
+        aux.models = None
+        aux.cv_ls = None
+        aux.cv_rs = None
 
         # aux.feat_transform = None
         with open(pth, 'wb') as f:
