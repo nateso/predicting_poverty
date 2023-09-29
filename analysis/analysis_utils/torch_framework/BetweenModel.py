@@ -203,7 +203,7 @@ class BetweenModel:
             feat_imp.append(self.models[fold].feature_importances_)
 
         mean_feat_imp = pd.DataFrame({
-            'variable_name': self.models[0].feature_names_in_,
+            'variable_name': self.feat_names,
             'feat_importance': np.mean(np.vstack(feat_imp).T, axis=1)
         })
 

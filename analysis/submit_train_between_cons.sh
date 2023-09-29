@@ -1,9 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=cons_between               # Job name
-#SBATCH -t 02:00:00                   # estimated time
-#SBATCH -p medium                        # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
-#SBATCH -c 4                            # number of CPUs (i.e., cores) per task
-#SBATCH -n 2
+#SBATCH -t 00:30:00                   # estimated time
+#SBATCH -p gpu                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
+#SBATCH -G v100:1              # Add the type of GPU used
 #SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
 #SBATCH --mail-type=all               # send mail when job begins and ends
 #SBATCH --mail-user=nschmid5@uni-goettingen.de  # email address

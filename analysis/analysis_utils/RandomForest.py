@@ -42,11 +42,16 @@ class Trainer():
         # store the model the the Trainer object
         self.model = forest
 
-    def validate(self):
-        # validate the model
-        self.y_hat_val = self.model.predict(self.X_val)
-        self.r2['val'] = self.model.score(self.X_val, self.y_val)
-        self.mse['val'] = mean_squared_error(self.y_val, self.y_hat_val)
+    def validate(self, X_val = None, y_val = None):
+        if X_val is None:
+            self.y_hat_val = self.model.predict(self.X_val)
+            self.r2['val'] = self.model.score(self.X_val, self.y_val)
+            self.mse['val'] = mean_squared_error(self.y_val, self.y_hat_val)
+        else:
+            y_hat_val = self.model.predict(X_val)
+            r2 = self.model.score(X_val, y_val)
+            mse = mean_squared_error(y_val, y_hat_val)
+            return y_hat_val, r2, mse
 
     def get_feature_importance(self):
         # add feature importance

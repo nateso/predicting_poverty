@@ -41,7 +41,7 @@ class FeatureExtractor:
             for x, _ in tqdm(dat_loader):
                 # forward pass
                 feats = self.model(x.to(self.device))
-                extracted_feats.append(feats.cpu().numpy())
+                extracted_feats.append(feats.detach().cpu().numpy())
         extracted_feats = np.concatenate(extracted_feats, axis=0)
         if reduced:
             return reduce_dimensions(extracted_feats, n_components)
