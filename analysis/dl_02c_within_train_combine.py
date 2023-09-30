@@ -101,6 +101,7 @@ within_df = df[['cluster_id','unique_id', target_var] + x_vars]
 
 # demean the data and standardise the variables
 demeaned_df = demean_df(within_df)
+demeaned_df = demeaned_df.rename(columns={'unique_id': 'delta_id'})
 demeaned_df_norm = standardise_df(demeaned_df, exclude_cols = [target_var])
 
 # divide the data into k different folds
