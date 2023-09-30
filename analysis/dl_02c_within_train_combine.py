@@ -50,10 +50,10 @@ spatial_cv_random_seed = 348 # this ensures that the validation sets are constan
 random_seed = 534
 
 # set the number of folds for k-fold CV
-n_folds = 5
+n_folds = 2
 
 # share of data used
-max_obs = 1000000
+max_obs = 200
 
 # set hyper-parameters
 hyper_params = {
