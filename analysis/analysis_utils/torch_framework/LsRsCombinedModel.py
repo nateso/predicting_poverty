@@ -106,12 +106,13 @@ class LsRsCombinedModel:
             rs_feat_names = ["rs_feat_" + str(i) for i in range(rs_feats.shape[1])]
 
             # append the features to the lsms_df
-            self.lsms_df = pd.concat([self.lsms_df, pd.DataFrame(ls_feats, columns=ls_feat_names)], axis=1)
-            self.lsms_df = pd.concat([self.lsms_df, pd.DataFrame(rs_feats, columns=rs_feat_names)], axis=1)
+            df = pd.concat([self.lsms_df, pd.DataFrame(ls_feats, columns=ls_feat_names)], axis=1)
+            df = pd.concat([df, pd.DataFrame(rs_feats, columns=rs_feat_names)], axis=1)
+
             self.feat_names = ls_feat_names + rs_feat_names + self.x_vars
 
             # get the training and validation data for this fold
-            train_df, val_df = split_lsms_ids(lsms_df=self.lsms_df, val_ids=splits['val_ids'])
+            train_df, val_df = split_lsms_ids(lsms_df=df, val_ids=splits['val_ids'])
 
             # get the X and y data
             X_train = train_df[self.feat_names].values
