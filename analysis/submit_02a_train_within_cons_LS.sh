@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=02a_cons_LS_within               # Job name
-#SBATCH -t 00:30:00                   # estimated time
+#SBATCH -t 20:00:00                   # estimated time
 #SBATCH -p gpu                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G v100:1              # Add the type of GPU used
 #SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
