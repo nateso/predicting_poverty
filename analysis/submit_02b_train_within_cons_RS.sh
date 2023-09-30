@@ -43,8 +43,7 @@ id_var='delta_id'
 img_folder='RS_v2_delta'
 stats_file='RS_v2_delta_img_stats.pkl'
 
-resnet_params="{'input_channels': 3, 'use_pretrained_weights':False, 'scaled_weight_init':False}"
-
+resnet_params='{"input_channels": 3, "use_pretrained_weights":False, "scaled_weight_init":False}'
 
 python -u dl_02_within_train_demean.py "$model_name" "$cv_object_name" "$target_var" "$data_type" "$id_var" "$img_folder" "$stats_file" "$resnet_params"
 
