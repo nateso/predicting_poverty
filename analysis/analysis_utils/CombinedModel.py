@@ -17,8 +17,8 @@ class CombinedModel:
         self.fold_ids = within_cv_object.fold_ids
 
         self.pred_df = self.get_preds()
-        self.res_r2 = {'combined': [], 'between': [], 'within': []}
-        self.res_mse = {'combined': [], 'between': [], 'within': []}
+        self.res_r2 = {'overall': [], 'between': [], 'within': []}
+        self.res_mse = {'overall': [], 'between': [], 'within': []}
 
     def get_preds(self):
         # get the id variables of both models
@@ -73,8 +73,8 @@ class CombinedModel:
             y_val = val_df[self.target_var]
 
             # calculate the performance on the validation sample
-            self.res_r2['combined'].append(r2_score(y_val, y_hat_val))
-            self.res_mse['combined'].append(mean_squared_error(y_val, y_hat_val))
+            self.res_r2['overall'].append(r2_score(y_val, y_hat_val))
+            self.res_mse['overall'].append(mean_squared_error(y_val, y_hat_val))
 
     def calculate_fold_weights(self):
         # calculate within fold weights
@@ -107,8 +107,8 @@ class CombinedModel:
         if use_fold_weights:
             between_fold_weights, within_fold_weights = self.calculate_fold_weights()
 
-            comb_r2 = np.average(self.res_r2['combined'], weights=within_fold_weights)
-            comb_mse = np.average(self.res_mse['combined'], weights=within_fold_weights)
+            comb_r2 = np.average(self.res_r2['overall'], weights=within_fold_weights)
+            comb_mse = np.average(self.res_mse['overall'], weights=within_fold_weights)
 
             between_r2 = np.average(self.res_r2['between'], weights=between_fold_weights)
             between_mse = np.average(self.res_mse['between'], weights=between_fold_weights)
@@ -116,8 +116,8 @@ class CombinedModel:
             within_r2 = np.average(self.res_r2['within'])
             within_mse = np.average(self.res_mse['within'])
         else:
-            comb_r2 = np.mean(self.res_r2['combined'])
-            comb_mse = np.mean(self.res_mse['combined'])
+            comb_r2 = np.mean(self.res_r2['overall'])
+            comb_mse = np.mean(self.res_mse['overall'])
 
             between_r2 = np.mean(self.res_r2['between'])
             between_mse = np.mean(self.res_mse['between'])
@@ -125,8 +125,8 @@ class CombinedModel:
             within_r2 = np.mean(self.res_r2['within'])
             within_mse = np.mean(self.res_mse['within'])
 
-        r2_perf = {'combined': comb_r2, 'between': between_r2, 'within': within_r2}
-        mse_perf = {'combined': comb_mse, 'between': between_mse, 'within': within_mse}
+        r2_perf = {'overall': comb_r2, 'between': between_r2, 'within': within_r2}
+        mse_perf = {'overall': comb_mse, 'between': between_mse, 'within': within_mse}
         performance = {'r2': r2_perf, 'mse': mse_perf}
 
         return performance
@@ -134,7 +134,7 @@ class CombinedModel:
     def print_tex(self, metric='r2'):
         overall_perf = self.compute_overall_performance(use_fold_weights=True)
         metric_perf = overall_perf[metric]
-        print(f"& {metric_perf['between']:.4f} & {metric_perf['within']:.4f} & {metric_perf['combined']:.4f}")
+        print(f"& {metric_perf['between']:.4f} & {metric_perf['within']:.4f} & {metric_perf['overall']:.4f}")
 
     def plot_true_vs_preds(self,
                            xlabel="True outcome values",
