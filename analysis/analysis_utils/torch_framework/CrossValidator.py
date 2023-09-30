@@ -208,7 +208,7 @@ class CrossValidator():
             train_r2 = np.average(self.res_r2['train'], weights=train_fold_weights)
             train_mse = np.average(self.res_mse['train'], weights=train_fold_weights)
             val_r2 = np.average(self.res_r2['val'], weights=val_fold_weights)
-            val_mse = np.average(self.mse['val'], weights=val_fold_weights)
+            val_mse = np.average(self.res_mse['val'], weights=val_fold_weights)
         else:
             train_r2 = np.mean(self.res_r2['train'])
             train_mse = np.mean(self.res_mse['train'])
