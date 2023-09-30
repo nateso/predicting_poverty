@@ -115,7 +115,6 @@ lsms_df = pd.read_csv(lsms_pth).iloc[:max_obs, :]
 # exclude all ids that are flagged
 lsms_df = lsms_df[~lsms_df['unique_id'].isin(flagged_uids)].reset_index(drop=True)
 
-
 cl_df = lsms_df[['cluster_id', 'country', 'lat', 'lon']].copy().drop_duplicates().reset_index(drop=True)
 within_df = lsms_df[['cluster_id', 'unique_id', target_var]]
 
