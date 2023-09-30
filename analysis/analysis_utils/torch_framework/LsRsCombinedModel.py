@@ -64,6 +64,7 @@ class LsRsCombinedModel:
         self.predictions = {self.id_var: [], 'y': [], 'y_hat': []}
         self.models = {}
         self.feat_names = []
+        self.feat_importance = None
 
     def train(self, min_samples_leaf=10, n_components=50):
         print('Initialising training')
@@ -144,6 +145,8 @@ class LsRsCombinedModel:
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished training after {time_elapsed} seconds")
+        # add feature importance
+        self.feat_importance = self.get_feat_importance()
 
     def get_fold_weights(self):
         '''
@@ -197,7 +200,7 @@ class LsRsCombinedModel:
         return mean_feat_imp
 
     def plot_feature_importance(self, fname=None, varnames=None):
-        feat_imp = self.get_feature_importance()
+        feat_imp = self.feat_importance
         if not varnames:
             varnames = feat_imp['variable_name']
         fig, ax = plt.subplots(figsize=(8, 10))
