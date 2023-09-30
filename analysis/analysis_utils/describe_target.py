@@ -24,10 +24,11 @@ def decomp_SST(lsms_df, spatial_cluster_id, target_var, verbose = True):
     if verbose:
         print(f"SSW = {SSW:.4f} - SSB = {SSB:.4f} - SST = {SST:.4f} - SST directly calc = {SST_2:.4f}")
         print(f"Share of SSW = {SSW/SST:.4f} - Share of SSB = {SSB / SST:.4f}")
-        print("\n Latex ouput")
-        print(f"{target_var} & {SSW:.2f} & {SSB:.2f} & {SST:.2f} & {SSW/SST:.2f} & {SSB/SST:.2f} & {n}")
+        print("\n Latex ouput (TSS, BSS, WSS, BSS (share), WSS (share))")
+        print(f"{target_var} & {SST:.0f} & {SSB:.2f} & {SSW:.2f} & {SSB/SST:.2f} & {SSW/SST:.2f}")
 
     return SSW, SSB, SST
+
 
 def describe_target_cntry(lsms_df, target_var):
     cntry_name_dict = {'eth': "Ethiopia", 'mwi': 'Malawi', 'nga': "Nigeria", 'uga': 'Uganda', 'tza': 'Tanzania'}
@@ -39,24 +40,26 @@ def describe_target_cntry(lsms_df, target_var):
         maxi = np.max(sub_df[target_var])
         sd = np.std(sub_df[target_var])
         n = len(sub_df)
-        print(f'{cntry_name_dict[cntry]} & {mn:.2f} & {med:.2f} & {mini:.2f} & {maxi:.2f} & {sd:.2f} & {n} \\\\')
-    # total_output = f'''Overall &
-    # {np.mean(lsms_df[target_var]):.2f} &
-    # {np.median(lsms_df[target_var]):.2f} &
-    # {np.min(lsms_df[target_var]):.2f} &
-    # {np.max(lsms_df[target_var]):.2f} &
-    # {np.std(lsms_df[target_var]):.2f} &
-    # {len(lsms_df[target_var])} \\\\'''
-    # print(total_output.replace('\n',''))
+        str = f'{cntry_name_dict[cntry]} & {mn:.2f} & {med:.2f} & {mini:.2f} & {maxi:.2f} & {sd:.2f} & {n} \\\\'
+        print("\\hspace{0.5cm} " + str)
 
-def describe_target(lsms_df, target_var):
-    output = f'''
-    {np.mean(lsms_df[target_var]):.2f} &
-    {np.median(lsms_df[target_var]):.2f} &
-    {np.min(lsms_df[target_var]):.2f} &
-    {np.max(lsms_df[target_var]):.2f} &
-    {np.std(lsms_df[target_var]):.2f} &
-    {len(lsms_df[target_var])} \\\\'''
-    output = output.replace('\n','').replace('\t','')
-    print(output)
+        # total_output = f'''Overall &
+        # {np.mean(lsms_df[target_var]):.2f} &
+        # {np.median(lsms_df[target_var]):.2f} &
+        # {np.min(lsms_df[target_var]):.2f} &
+        # {np.max(lsms_df[target_var]):.2f} &
+        # {np.std(lsms_df[target_var]):.2f} &
+        # {len(lsms_df[target_var])} \\\\'''
+        # print(total_output.replace('\n',''))
+
+    def describe_target(lsms_df, target_var):
+        output = f'''
+        {np.mean(lsms_df[target_var]):.2f} &
+        {np.median(lsms_df[target_var]):.2f} &
+        {np.min(lsms_df[target_var]):.2f} &
+        {np.max(lsms_df[target_var]):.2f} &
+        {np.std(lsms_df[target_var]):.2f} &
+        {len(lsms_df[target_var])} \\\\'''
+        output = output.replace('\n', '').replace('\t', '').replace('    ', ' ')
+        print('\\hspace{0.5cm} Overall &' + output)
 
