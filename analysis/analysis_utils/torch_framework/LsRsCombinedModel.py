@@ -146,7 +146,7 @@ class LsRsCombinedModel:
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
         print(f"Finished training after {time_elapsed} seconds")
         # add feature importance
-        self.feat_importance = self.get_feat_importance()
+        self.feat_importance = self.get_feature_importance()
 
     def get_fold_weights(self):
         '''
@@ -222,7 +222,6 @@ class LsRsCombinedModel:
         aux.models = None
         aux.cv_ls = None
         aux.cv_rs = None
-        aux.random_crap = "blablbabla"
 
         # aux.feat_transform = None
         with open(pth, 'wb') as f:
