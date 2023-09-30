@@ -69,10 +69,10 @@ spatial_cv_random_seed = 348
 random_seed = 230897
 
 # set the number of folds for k-fold CV
-n_folds = 2
+n_folds = 5
 
 # share of data used
-max_obs = 200
+max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
