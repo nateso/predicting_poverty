@@ -222,6 +222,7 @@ class LsRsCombinedModel:
         aux.models = None
         aux.cv_ls = None
         aux.cv_rs = None
+        aux.random_crap = "blablbabla"
 
         # aux.feat_transform = None
         with open(pth, 'wb') as f:
