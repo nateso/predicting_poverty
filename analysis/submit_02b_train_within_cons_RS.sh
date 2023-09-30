@@ -38,7 +38,7 @@ model_name='within_cons_RS'
 cv_object_name='within_cons_RS_cv'
 target_var='log_mean_pc_cons_usd_2017'
 
-data_type='RS'
+data_type='RS_v2'
 id_var='delta_id'
 img_folder='RS_v2_delta'
 stats_file='RS_v2_delta_img_stats.pkl'
