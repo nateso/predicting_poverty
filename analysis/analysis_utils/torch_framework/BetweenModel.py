@@ -88,8 +88,8 @@ class BetweenModel:
             rs_model.load_state_dict(torch.load(rs_state_dict, map_location=self.device))
 
             # get data loaders for the LS and RS images
-            ls_loader = get_dataloader(self.cv_ls, self.lsms_df, 128)
-            rs_loader = get_dataloader(self.cv_rs, self.lsms_df, 128)
+            ls_loader = get_dataloader(self.cv_ls, self.lsms_df, 512)
+            rs_loader = get_dataloader(self.cv_rs, self.lsms_df, 512)
 
             # extract features
             ls_feat_extractor = FeatureExtractor(ls_model, self.device)
