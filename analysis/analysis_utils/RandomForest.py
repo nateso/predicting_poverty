@@ -204,8 +204,8 @@ class CV_Evaluator():
         self.cv_trainer = cv_trainer
         self.predictions = {self.id_var: [], 'y': [], 'y_hat': []}
 
-        self.cv_r2 = []
-        self.cv_mse = []
+        self.res_r2 = {'val':[]}
+        self.res_mse = {'val':[]}
 
     def evaluate(self):
         for fold, splits in self.fold_ids.items():
@@ -223,17 +223,31 @@ class CV_Evaluator():
             self.predictions['y'] += list(y_val)
             self.predictions['y_hat'] += list(y_hat_val)
 
-            self.cv_r2.append(model.score(X_val, y_val))
-            self.cv_mse.append(mean_squared_error(y_val, y_hat_val))
+            self.res_r2['val'].append(model.score(X_val, y_val))
+            self.res_mse['val'].append(mean_squared_error(y_val, y_hat_val))
+
+    def get_fold_weights(self):
+        n = len(self.lsms_df)
+        val_weights = []
+        for split in self.fold_ids.values():
+            # subset the lsms df to the clusters in the validation split
+            val_cids = split['val_ids']
+            mask = self.lsms_df.cluster_id.isin(val_cids)
+            sub_df = self.lsms_df[mask]
+            val_weights.append(len(sub_df) / n)
+
+        return val_weights
 
     def compute_overall_performance(self, use_fold_weights=True):
         if use_fold_weights:
-            fold_weights = [len(v['val_ids']) / (len(v['val_ids']) + len(v['train_ids'])) for v in
-                            self.fold_ids.values()]
-            r2 = np.average(self.cv_r2, weights=fold_weights)
-            mse = np.average(self.cv_mse, weights=fold_weights)
-            return {'r2': r2, 'mse': mse}
+            # compute the fold weights
+            val_fold_weights = self.get_fold_weights()
+            # compute the weighted average of the performance metrics
+            val_r2 = np.average(self.res_r2['val'], weights=val_fold_weights)
+            val_mse = np.average(self.res_mse['val'], weights=val_fold_weights)
         else:
-            r2 = np.mean(self.cv_r2)
-            mse = np.mean(self.cv_mse)
-            return {'r2': r2, 'mse': mse}
+            val_r2 = np.mean(self.res_r2['val'])
+            val_mse = np.mean(self.res_mse['val'])
+        performance = {'val_r2': val_r2, 'val_mse': val_mse}
+        return performance
+
