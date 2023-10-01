@@ -81,13 +81,13 @@ class CrossValidator():
             # prepare the training data
             # val_fold = (fold + 1) % 5
             # val_cids = self.fold_ids[val_fold]['val_ids']
-            test_cids = split['val_ids']
+            # test_cids = split['val_ids']
 
             # randomly sample 15% of the training data for validation
-            train_cids = split['train_ids']
-            val_cids = np.random.choice(train_cids, size=int(0.15 * len(train_cids)), replace=False)
+            # train_cids = split['train_ids']
+            # val_cids = np.random.choice(train_cids, size=int(0.15 * len(train_cids)), replace=False)
 
-            train_df, val_df, test_df = self.split_data_train_val_test(val_cids, test_cids)
+            train_df, val_df, test_df = self.split_data_train_val_test(val_cids=split['val_ids'])
             train_loader, val_loader, test_loader = self.get_dataloaders(train_df, val_df, test_df,
                                                                          batch_size=hyper_params['batch_size'][0])
 
@@ -226,12 +226,29 @@ class CrossValidator():
         performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
         return performance
 
-    def split_data_train_val_test(self, val_ids, test_ids):
+    # def split_data_train_val_test(self, val_ids, test_ids):
+    #     # split the data into training and test dataframes
+    #     train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=test_ids)
+    #     train_df, val_df = split_lsms_ids(train_df, val_ids=val_ids)
+    #
+    #     return train_df, val_df, test_df
+
+    def split_data_train_val_test(self, val_cids):
         # split the data into training and test dataframes
-        train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=test_ids)
-        train_df, val_df = split_lsms_ids(train_df, val_ids=val_ids)
+        train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=val_cids)
+
+        # split the training data further into a training and a validation set for hyper-parameter tuning
+        # for now just do hyper-parameter tuning using a simple validation set approach
+        train_val_folds = split_lsms_spatial(train_df,
+                                             test_ratio=0.15,
+                                             random_seed=self.random_seed,
+                                             verbose=False)
+        train_df, val_df = split_lsms_ids(train_df,
+                                          val_ids=train_val_folds[0][
+                                              'val_ids'])  # there is only one fold in train_val_folds
 
         return train_df, val_df, test_df
+
 
     def get_dataloaders(self, train_df, val_df, test_df=None, batch_size=128):
         # initialise the datasets
