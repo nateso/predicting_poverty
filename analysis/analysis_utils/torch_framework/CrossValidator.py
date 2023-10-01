@@ -79,9 +79,13 @@ class CrossValidator():
                 torch.manual_seed(fold_seed)
 
             # prepare the training data
-            val_fold = (fold + 1) % 5
-            val_cids = self.fold_ids[val_fold]['val_ids']
+            # val_fold = (fold + 1) % 5
+            # val_cids = self.fold_ids[val_fold]['val_ids']
             test_cids = split['val_ids']
+
+            # randomly sample 15% of the training data for validation
+            train_cids = split['train_ids']
+            val_cids = np.random.choice(train_cids, size=int(0.15 * len(train_cids)), replace=False)
 
             train_df, val_df, test_df = self.split_data_train_val_test(val_cids, test_cids)
             train_loader, val_loader, test_loader = self.get_dataloaders(train_df, val_df, test_df,
