@@ -80,7 +80,7 @@ class CrossValidator():
 
             # prepare the training data
             val_fold = (fold + 1) % 5
-            val_cids = self.fold_ids[val_fold]
+            val_cids = self.fold_ids[val_fold]['val_ids']
             test_cids = split['val_ids']
 
             train_df, val_df, test_df = self.split_data_train_val_test(val_cids, test_cids)
