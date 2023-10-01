@@ -56,12 +56,12 @@ class CombinedModel:
 
     def evaluate(self):
         # add the R2 from the between and within model
-        self.res_r2['between'] = self.between_cv_object.r2['val']
-        self.res_r2['within'] = self.within_cv_object.r2['val']
+        self.res_r2['between'] = self.between_cv_object.res_r2['val']
+        self.res_r2['within'] = self.within_cv_object.res_r2['val']
 
         # add MSE from the between and within model
-        self.res_mse['between'] = self.between_cv_object.mse['val']
-        self.res_mse['within'] = self.within_cv_object.mse['val']
+        self.res_mse['between'] = self.between_cv_object.res_mse['val']
+        self.res_mse['within'] = self.within_cv_object.res_mse['val']
 
         # calculate the results for each fold in the combined model
         for fold, splits in self.fold_ids.items():

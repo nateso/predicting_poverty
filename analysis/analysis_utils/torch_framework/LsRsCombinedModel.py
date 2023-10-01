@@ -138,10 +138,10 @@ class LsRsCombinedModel:
             self.predictions['y_hat'] += list(forest_trainer.y_hat_val)
 
             # store the models results
-            self.res_r2['train'].append(forest_trainer.r2['train'])
-            self.res_mse['train'].append(forest_trainer.mse['train'])
-            self.res_r2['val'].append(forest_trainer.r2['val'])
-            self.res_mse['val'].append(forest_trainer.mse['val'])
+            self.res_r2['train'].append(forest_trainer.res_r2['train'])
+            self.res_mse['train'].append(forest_trainer.res_mse['train'])
+            self.res_r2['val'].append(forest_trainer.res_r2['val'])
+            self.res_mse['val'].append(forest_trainer.res_mse['val'])
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)

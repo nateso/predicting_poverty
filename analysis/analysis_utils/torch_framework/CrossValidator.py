@@ -79,7 +79,11 @@ class CrossValidator():
                 torch.manual_seed(fold_seed)
 
             # prepare the training data
-            train_df, val_df, test_df = self.split_data_train_val_test(split['val_ids'])
+            val_fold = (fold + 1) % 5
+            val_cids = self.fold_ids[val_fold]
+            test_cids = split['val_ids']
+
+            train_df, val_df, test_df = self.split_data_train_val_test(val_cids, test_cids)
             train_loader, val_loader, test_loader = self.get_dataloaders(train_df, val_df, test_df,
                                                                          batch_size=hyper_params['batch_size'][0])
 
@@ -119,7 +123,8 @@ class CrossValidator():
             self.train_fold(train_loader, best_params, model_fold_name)
 
             # evaluate the model on the test set (using the just trained model)
-            self.evaluate_fold(self.best_model_paths[fold], test_loader, split)
+            test_ids = list(test_df[self.id_var]) # gets the actual ids (not always cid!)
+            self.evaluate_fold(self.best_model_paths[fold], test_loader, test_ids)
 
             # print the results of the fold
             print(f"\nResults of fold {fold}:")
@@ -155,13 +160,13 @@ class CrossValidator():
         trainer.run_training(params['n_epochs'])
 
         # append the model results to the list of results (the results of the last epoch)
-        self.res_mse['train'].append(trainer.mse['train'][-1])
-        self.res_r2['train'].append(trainer.r2['train'][-1])
+        self.res_mse['train'].append(trainer.res_mse['train'][-1])
+        self.res_r2['train'].append(trainer.res_r2['train'][-1])
 
         # append the model path to the list of best model paths
         self.best_model_paths.append(trainer.best_model_path)
 
-    def evaluate_fold(self, model_pth, test_loader, split):
+    def evaluate_fold(self, model_pth, test_loader, test_ids):
 
         # use the best model to initialise the evaluator on the test set
         evaluator = Evaluator(model=self.model_class.model,
@@ -171,7 +176,7 @@ class CrossValidator():
         evaluator.predict()
 
         # save the predictions
-        self.predictions[self.id_var] += split['val_ids']
+        self.predictions[self.id_var] += test_ids
         self.predictions['y'] += evaluator.predictions['y']
         self.predictions['y_hat'] += evaluator.predictions['y_hat']
 
@@ -217,19 +222,11 @@ class CrossValidator():
         performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
         return performance
 
-    def split_data_train_val_test(self, val_ids):
+    def split_data_train_val_test(self, val_ids, test_ids):
         # split the data into training and test dataframes
-        train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=val_ids)
+        train_df, test_df = split_lsms_ids(self.lsms_df, val_ids=test_ids)
+        train_df, val_df = split_lsms_ids(train_df, val_ids=val_ids)
 
-        # split the training data further into a training and a validation set for hyper-parameter tuning
-        # for now just do hyper-parameter tuning using a simple validation set approach
-        train_val_folds = split_lsms_spatial(train_df,
-                                             test_ratio=0.2,
-                                             random_seed=self.random_seed,
-                                             verbose=False)
-        train_df, val_df = split_lsms_ids(train_df,
-                                          val_ids=train_val_folds[0][
-                                              'val_ids'])  # there is only one fold in train_val_folds
         return train_df, val_df, test_df
 
     def get_dataloaders(self, train_df, val_df, test_df=None, batch_size=128):

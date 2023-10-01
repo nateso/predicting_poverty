@@ -31,8 +31,8 @@ class Trainer():
         self.model_folder = model_folder
         self.model_name = model_name
 
-        self.mse = {'train': [], 'val': []}
-        self.r2 = {'train': [], 'val': []}
+        self.res_mse = {'train': [], 'val': []}
+        self.res_r2 = {'train': [], 'val': []}
         self.best_model_path = None
 
     def train(self):
@@ -68,8 +68,8 @@ class Trainer():
             epoch_y += list(y.detach().cpu().numpy())
             epoch_yhat += list(y_hat.detach().cpu().numpy())
         # save results
-        self.mse['train'].append(np.mean(epoch_loss))
-        self.r2['train'].append(r2_score(epoch_y, epoch_yhat))
+        self.res_mse['train'].append(np.mean(epoch_loss))
+        self.res_r2['train'].append(r2_score(epoch_y, epoch_yhat))
 
     def validate(self):
         '''
@@ -98,8 +98,8 @@ class Trainer():
                 epoch_y += list(y.detach().cpu().numpy())
                 epoch_yhat += list(y_hat.detach().cpu().numpy())
         # save results
-        self.mse['val'].append(np.mean(epoch_loss))
-        self.r2['val'].append(r2_score(epoch_y, epoch_yhat))
+        self.res_mse['val'].append(np.mean(epoch_loss))
+        self.res_r2['val'].append(r2_score(epoch_y, epoch_yhat))
 
     def run_training(self, n_epochs):
         '''
@@ -118,14 +118,14 @@ class Trainer():
             # print the epoch result
             if self.val_loader is not None:
                 print(
-                    f"\t\tEPOCH {epoch+1} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f} - Val MSE: {self.mse['val'][-1]:.4f} - Val R2 {self.r2['val'][-1]:.4f}")
+                    f"\t\tEPOCH {epoch+1} - Train MSE: {self.res_mse['train'][-1]:.4f} - Train R2 {self.res_r2['train'][-1]:.4f} - Val MSE: {self.res_mse['val'][-1]:.4f} - Val R2 {self.res_r2['val'][-1]:.4f}")
             else:
-                print(f"\t\tEPOCH {epoch+1} - Train MSE: {self.mse['train'][-1]:.4f} - Train R2 {self.r2['train'][-1]:.4f}")
+                print(f"\t\tEPOCH {epoch+1} - Train MSE: {self.res_mse['train'][-1]:.4f} - Train R2 {self.res_r2['train'][-1]:.4f}")
 
             if self.early_stopper is not None:
                 self.early_stopper.update(
-                    val_loss=self.mse['val'][-1],
-                    val_r2=self.r2['val'][-1]
+                    val_loss=self.res_mse['val'][-1],
+                    val_r2=self.res_r2['val'][-1]
                 )
                 if self.early_stopper.early_stop:
                     print('\n')
@@ -144,8 +144,8 @@ class Trainer():
                 # save the parameters of the currently best model only if model name provided and validation set used
                 if self.val_loader is not None:
                     # only keep the best model (to reduce memory usage)
-                    current_val_r2 = self.r2['val'][-1]
-                    best_val_r2 = max(self.r2['val'])
+                    current_val_r2 = self.res_r2['val'][-1]
+                    best_val_r2 = max(self.res_r2['val'])
                     if current_val_r2 == best_val_r2:
                         self.save_model_params(suffix='best')
 
@@ -169,31 +169,31 @@ class Trainer():
         torch.save(self.model.state_dict(), checkpoint_pth)
 
     def save_performance_metrics(self, folder_pth):
-        if len(self.mse['train']) != 0:
+        if len(self.res_mse['train']) != 0:
             val_pth = f"{folder_pth}/val_loss.npy"
-            np.save(val_pth, self.mse['val'])
+            np.save(val_pth, self.res_mse['val'])
             train_pth = f"{folder_pth}/train_loss.npy"
-            np.save(train_pth, self.mse['train'])
+            np.save(train_pth, self.res_mse['train'])
             print(f'Training results saved to {folder_pth}')
         else:
             print("Model not yet trained")
 
     def return_best_results(self):
         if self.val_loader is not None:
-            min_loss = np.min(self.mse['val'])
-            min_loss_epoch = np.argmin(self.mse['val']) + 1
-            max_r2 = np.max(self.r2['val'])
-            max_r2_epoch = np.argmax(self.r2['val']) + 1
+            min_loss = np.min(self.res_mse['val'])
+            min_loss_epoch = np.argmin(self.res_mse['val']) + 1
+            max_r2 = np.max(self.res_r2['val'])
+            max_r2_epoch = np.argmax(self.res_r2['val']) + 1
             print(f"\t\tLowest loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
             print(f"\t\tMaximum R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
             return min_loss, min_loss_epoch, max_r2, max_r2_epoch
 
     def get_best_model(self):
-        if len(self.mse['train']) != 0:
-            min_loss = np.min(self.mse['val'])
-            min_loss_epoch = np.argmin(self.mse['val']) + 1
-            max_r2 = np.max(self.r2['val'])
-            max_r2_epoch = np.argmax(self.r2['val']) + 1
+        if len(self.res_mse['train']) != 0:
+            min_loss = np.min(self.res_mse['val'])
+            min_loss_epoch = np.argmin(self.res_mse['val']) + 1
+            max_r2 = np.max(self.res_r2['val'])
+            max_r2_epoch = np.argmax(self.res_r2['val']) + 1
             print(f"\t\tLowest loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
             print(f"\t\tMaximum R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
             self.best_model_path = f"results/model_checkpoints/{self.model_folder}/{self.model_name}_best.pth"
@@ -201,16 +201,16 @@ class Trainer():
             print("Model not yet trained")
 
     def plot_loss_mse_r2(self):
-        if len(self.mse['val']) != 0:
+        if len(self.res_mse['val']) != 0:
             fig, ax1 = plt.subplots(figsize=(5, 5))
-            ax1.plot(self.mse['val'], label='Validation MSE', color='red')
-            ax1.plot(self.mse['train'], label='Training MSE', color='red', linestyle='--')
+            ax1.plot(self.res_mse['val'], label='Validation MSE', color='red')
+            ax1.plot(self.res_mse['train'], label='Training MSE', color='red', linestyle='--')
             ax1.set_xlabel("Epoch")
             ax1.set_ylabel("Loss", color='red')
             ax1.tick_params(axis='y', labelcolor='red')
             ax2 = ax1.twinx()
-            ax2.plot(self.r2['val'], label='Validation R2', color='blue')
-            ax2.plot(self.r2['train'], label='Training R2', color='blue', linestyle='--')
+            ax2.plot(self.res_r2['val'], label='Validation R2', color='blue')
+            ax2.plot(self.res_r2['train'], label='Training R2', color='blue', linestyle='--')
             ax2.set_ylabel("R2", color='blue')
             ax2.tick_params(axis='y', labelcolor='blue')
             plt.tight_layout()

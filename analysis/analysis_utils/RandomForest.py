@@ -23,8 +23,8 @@ class Trainer():
         self.random_seed = random_seed
         self.model = None
 
-        self.r2 = {'train': None, 'val': None}
-        self.mse = {'train': None, 'val': None}
+        self.res_r2 = {'train': None, 'val': None}
+        self.res_mse = {'train': None, 'val': None}
 
     def train(self, min_samples_leaf=5):
         forest = RandomForestRegressor(n_estimators=3000,
@@ -36,8 +36,8 @@ class Trainer():
 
         # get the training performance
         self.y_hat_train = forest.predict(self.X_train)
-        self.r2['train'] = forest.score(self.X_train, self.y_train)
-        self.mse['train'] = mean_squared_error(self.y_train, self.y_hat_train)
+        self.res_r2['train'] = forest.score(self.X_train, self.y_train)
+        self.res_mse['train'] = mean_squared_error(self.y_train, self.y_hat_train)
 
         # store the model the the Trainer object
         self.model = forest
@@ -45,8 +45,8 @@ class Trainer():
     def validate(self, X_val = None, y_val = None):
         if X_val is None:
             self.y_hat_val = self.model.predict(self.X_val)
-            self.r2['val'] = self.model.score(self.X_val, self.y_val)
-            self.mse['val'] = mean_squared_error(self.y_val, self.y_hat_val)
+            self.res_r2['val'] = self.model.score(self.X_val, self.y_val)
+            self.res_mse['val'] = mean_squared_error(self.y_val, self.y_hat_val)
         else:
             y_hat_val = self.model.predict(X_val)
             r2 = self.model.score(X_val, y_val)
@@ -84,8 +84,8 @@ class CrossValidator():
         self.x_vars = x_vars
         self.random_seed = random_seed
 
-        self.r2 = {'train': [], 'val': []}
-        self.mse = {'train': [], 'val': []}
+        self.res_r2 = {'train': [], 'val': []}
+        self.res_mse = {'train': [], 'val': []}
         self.predictions = {id_var: [], 'y': [], 'y_hat': []}
         self.models = {}
 
@@ -116,10 +116,10 @@ class CrossValidator():
             self.predictions['y_hat'] += list(forest_trainer.y_hat_val)
 
             # store the models results
-            self.r2['train'].append(forest_trainer.r2['train'])
-            self.mse['train'].append(forest_trainer.mse['train'])
-            self.r2['val'].append(forest_trainer.r2['val'])
-            self.mse['val'].append(forest_trainer.mse['val'])
+            self.res_r2['train'].append(forest_trainer.res_r2['train'])
+            self.res_mse['train'].append(forest_trainer.res_mse['train'])
+            self.res_r2['val'].append(forest_trainer.res_r2['val'])
+            self.res_mse['val'].append(forest_trainer.res_mse['val'])
 
         end_time = time.time()
         time_elapsed = np.round(end_time - start_time, 0).astype(int)
@@ -145,15 +145,15 @@ class CrossValidator():
             # compute the fold weights
             val_fold_weights, train_fold_weights = self.get_fold_weights()
             # compute the weighted average of the performance metrics
-            train_r2 = np.average(self.r2['train'], weights=train_fold_weights)
-            train_mse = np.average(self.mse['train'], weights=train_fold_weights)
-            val_r2 = np.average(self.r2['val'], weights=val_fold_weights)
-            val_mse = np.average(self.mse['val'], weights=val_fold_weights)
+            train_r2 = np.average(self.res_r2['train'], weights=train_fold_weights)
+            train_mse = np.average(self.res_mse['train'], weights=train_fold_weights)
+            val_r2 = np.average(self.res_r2['val'], weights=val_fold_weights)
+            val_mse = np.average(self.res_mse['val'], weights=val_fold_weights)
         else:
-            train_r2 = np.mean(self.r2['train'])
-            train_mse = np.mean(self.mse['train'])
-            val_r2 = np.mean(self.r2['val'])
-            val_mse = np.mean(self.mse['val'])
+            train_r2 = np.mean(self.res_r2['train'])
+            train_mse = np.mean(self.res_mse['train'])
+            val_r2 = np.mean(self.res_r2['val'])
+            val_mse = np.mean(self.res_mse['val'])
         performance = {'train_r2': train_r2, 'train_mse': train_mse, 'val_r2': val_r2, 'val_mse': val_mse}
         return performance
 
