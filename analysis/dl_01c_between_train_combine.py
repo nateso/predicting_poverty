@@ -21,7 +21,10 @@ if len(sys.argv) != 5:
 
 print("Hello!")
 print("Initialising Training for the Between Model - combining LS and RS")
+print(f"Object name: {sys.argv[1]}")
 print(f"Target variable: {sys.argv[2]}")
+print(f"LS CV path: {sys.argv[3]}")
+print(f"RS CV path: {sys.argv[4]}")
 print("\n")
 
 ####################################################################################################

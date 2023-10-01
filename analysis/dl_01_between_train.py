@@ -75,11 +75,11 @@ max_obs = 1000000
 hyper_params = {
     'lr': [1e-2, 1e-3],
     'batch_size': [128],
-    'alpha': [1e-2, 1e-3],
+    'alpha': [1e-2, 1e-3, 1e-4],
     'step_size': [1],
     'gamma': [0.96],
     'n_epochs': [200],
-    'patience': [40]
+    'patience': [20]
 }
 
 # training device
