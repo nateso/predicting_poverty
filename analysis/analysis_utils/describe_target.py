@@ -43,16 +43,17 @@ def describe_target_cntry(lsms_df, target_var):
         str = f'{cntry_name_dict[cntry]} & {mn:.2f} & {med:.2f} & {mini:.2f} & {maxi:.2f} & {sd:.2f} & {n} \\\\'
         print("\\hspace{0.5cm} " + str)
 
-        # total_output = f'''Overall &
-        # {np.mean(lsms_df[target_var]):.2f} &
-        # {np.median(lsms_df[target_var]):.2f} &
-        # {np.min(lsms_df[target_var]):.2f} &
-        # {np.max(lsms_df[target_var]):.2f} &
-        # {np.std(lsms_df[target_var]):.2f} &
-        # {len(lsms_df[target_var])} \\\\'''
-        # print(total_output.replace('\n',''))
+    total_output = f'''
+    {np.mean(lsms_df[target_var]):.2f} &
+    {np.median(lsms_df[target_var]):.2f} &
+    {np.min(lsms_df[target_var]):.2f} &
+    {np.max(lsms_df[target_var]):.2f} &
+    {np.std(lsms_df[target_var]):.2f} &
+    {len(lsms_df[target_var])} \\\\'''
+    total_output = total_output.replace('\n', '').replace('\t', '').replace('    ', ' ')
+    print('\\hspace{0.5cm} Overall &' + total_output)
 
-    def describe_target(lsms_df, target_var):
+def describe_target(lsms_df, target_var):
         output = f'''
         {np.mean(lsms_df[target_var]):.2f} &
         {np.median(lsms_df[target_var]):.2f} &
