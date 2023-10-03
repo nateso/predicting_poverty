@@ -259,17 +259,30 @@ def standardise_img(img, means, stds):
     return norm_img
 
 
-def impute_pixels(img, band_means):
-    # sets the pixel values to the overall mean of the image in order to not NAs in the image
+# def impute_pixels(img, band_means):
+#     # sets the pixel values to the overall mean of the image in order to not NAs in the image
+#     n_bands = img.shape[2]
+#     imp_img = []
+#     for band_idx in range(n_bands):
+#         img_band = img[:, :, band_idx].copy()
+#         na_mask = np.isnan(img_band)
+#         img_band[na_mask] = band_means[band_idx]
+#         imp_img.append(img_band)
+#     imp_img = np.array(imp_img).transpose(1, 2, 0)
+#     return imp_img
+
+def impute_missing_values(img):
     n_bands = img.shape[2]
     imp_img = []
     for band_idx in range(n_bands):
         img_band = img[:, :, band_idx].copy()
         na_mask = np.isnan(img_band)
-        img_band[na_mask] = band_means[band_idx]
+        band_mean = np.nanmean(img_band)
+        img_band[na_mask] = band_mean
         imp_img.append(img_band)
     imp_img = np.array(imp_img).transpose(1, 2, 0)
     return imp_img
+
 
 
 def count_bad_pixels(img):

@@ -29,6 +29,7 @@ data_type = 'LS'
 ls_proc_pth = f"{sat_img_dir}/{data_type}/{data_type}_median_cluster"
 ls_rgb_pth = f"{sat_img_dir}/{data_type}/{data_type}_rgb"
 ls_rgb_median_pth = f"{sat_img_dir}/{data_type}/{data_type}_rgb_median_cluster"
+ls_ms_pth = f"{sat_img_dir}/{data_type}/{data_type}_ms"
 if not os.path.isdir(ls_proc_pth):
     os.makedirs(ls_proc_pth)
 else:
@@ -41,6 +42,9 @@ if not os.path.isdir(ls_rgb_pth):
 
 if not os.path.isdir(ls_rgb_median_pth):
     os.makedirs(ls_rgb_median_pth)
+
+if not os.path.isdir(ls_ms_pth):
+    os.makedirs(ls_ms_pth)
 
 
 raw_img_dir = f"{sat_img_dir}/{data_type}/{data_type}_raw"
@@ -76,6 +80,12 @@ for cid, uids in tqdm(cid_uid_dict.items()):
         rgb_img = img[:, :, :3]
         rgb_file_pth = f'{sat_img_dir}/{data_type}/LS_rgb/{data_type}_{uid}.npy'
         np.save(rgb_file_pth, rgb_img)
+
+        # save processed MS images
+        ms_img = proc_img # the ms image includes all bands
+        ms_img = impute_missing_values(ms_img) # impute missing values for the ms image (need this for the temp band as it has more missing values than the RGB bands)
+        ms_file_pth = f'{sat_img_dir}/{data_type}/LS_ms/{data_type}_{uid}.npy'
+        np.save(ms_file_pth, ms_img)
 
         # extract image statistics
         for i in range(img.shape[2]):
