@@ -72,8 +72,6 @@ root_data_dir = "/scratch/users/nschmid5/data_analysis/Data"
 # the lsms data
 lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
 
-lsms_pth = f"{root_data_dir}/lsms/processed/labels_cluster_v1.csv"
-
 # asset index excluding ethiopia
 eth_idx_pth = f"{root_data_dir}/lsms/processed/asset_index_no_eth.csv"
 
@@ -88,7 +86,7 @@ random_seed = 534
 spatial_cv_random_seed = 348
 
 # set the number of folds for k-fold CV
-n_folds = 5
+n_folds = 2
 
 ####################################################################################################
 # Load the datasets
@@ -126,6 +124,8 @@ lsms_vars = ['unique_id', 'n_households',
              'mean_asset_index_yeh', 'avg_mean_asset_index_yeh',
              'mean_asset_index_yeh_no_eth', 'avg_mean_asset_index_yeh_no_eth']
 
+lsms_df = lsms_df.iloc[:300,:].reset_index(drop = True)
+
 df = pd.merge(lsms_df[lsms_vars], feat_df, on = 'unique_id', how = 'left')
 
 # describe the training data broadly
@@ -157,7 +157,7 @@ for j in range(10):
     rep_seed = random_seed + j
 
     # divide the data into k different folds
-    fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=spatial_cv_random_seed)
+    fold_ids = split_lsms_spatial(lsms_df, n_folds=n_folds, random_seed=spatial_cv_random_seed+j)
 
     # run the bewtween training
     print('Between training')
