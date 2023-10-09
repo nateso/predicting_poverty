@@ -86,7 +86,7 @@ random_seed = 534
 spatial_cv_random_seed = 348
 
 # set the number of folds for k-fold CV
-n_folds = 2
+n_folds = 5
 
 ####################################################################################################
 # Load the datasets
@@ -123,8 +123,6 @@ lsms_vars = ['unique_id', 'n_households',
              'log_mean_pc_cons_usd_2017', 'avg_log_mean_pc_cons_usd_2017',
              'mean_asset_index_yeh', 'avg_mean_asset_index_yeh',
              'mean_asset_index_yeh_no_eth', 'avg_mean_asset_index_yeh_no_eth']
-
-lsms_df = lsms_df.iloc[:300,:].reset_index(drop = True)
 
 df = pd.merge(lsms_df[lsms_vars], feat_df, on = 'unique_id', how = 'left')
 
