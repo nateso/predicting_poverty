@@ -58,7 +58,7 @@ max_obs = 1000000
 # set hyper-parameters
 hyper_params = {
     'min_samples_leaf':1,
-    'n_components':25
+    'n_components':10
 }
 
 # training device
