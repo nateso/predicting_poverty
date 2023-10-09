@@ -31,13 +31,12 @@ from analysis_utils.CombinedModel import CombinedModel
 
 print("Hello!")
 print("Initialising the training of the base model")
-print(f"Between id variable: {sys.argv[1]}")
-print(f"Between target variable: {sys.argv[2]}")
-print(f"Between x variables: {sys.argv[3]}")
-print(f"Within id variable: {sys.argv[4]}")
-print(f"Within target variable: {sys.argv[5]}")
-print(f"Within x variables: {sys.argv[6]}")
-print(f"file output path: {sys.argv[7]}")
+print(f"Between target variable: {sys.argv[1]}")
+print(f"Within target variable: {sys.argv[2]}")
+print(f"Use LS variables: {sys.argv[3]}")
+print(f"Remove Ethiopia: {sys.argv[4]}")
+print(f"file output path: {sys.argv[5]}")
+
 print("\n")
 
 between_target_var = sys.argv[1]
