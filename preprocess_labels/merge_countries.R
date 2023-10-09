@@ -155,6 +155,40 @@ generate_latex_table(asset_loadings, label = 'asset_index',
                      caption = 'Asset Wealth Index Factor Loadings',
                      n_digits = 2)
 
+
+#*******************************************************************************
+#### Do a PCA for asset index exluding households in Ethiopia ####
+#*******************************************************************************
+
+no_eth_dat = dat %>% filter(country != 'eth') %>% 
+  select(unique_id, cluster_id, country, start_year, wave, series, rural, lat, lon,
+  rooms, electric, floor_qual, watsup_qual, toilet_qual, phone, radio, tv, car)
+
+### Repliate the Yeh et al. 2020 index
+# extract the variables to replciate the Yeh et al. 2020 asset index
+yeh_assets <- no_eth_dat %>% select(unique_id, cluster_id, rooms, electric, floor_qual, watsup_qual, 
+                             toilet_qual, phone, radio, tv, car)
+
+# impute missing values
+yeh_assets <- impute_missing_vals(yeh_assets)
+
+# run the PCA to extract the wealth index (Index I)
+pca_yeh <- create_wealth_index(yeh_assets)
+yeh_assets$asset_index_yeh <- (pca_yeh$asset_index - 0)/sd(pca_yeh$asset_index, na.rm = T)
+
+### store PCA results (wealth index) in the large data
+no_eth_dat %<>% 
+  left_join(yeh_assets %>% select(unique_id, asset_index_yeh), by = 'unique_id')
+
+
+no_eth_cl_dat <- no_eth_dat %>% 
+  group_by(country, start_year, wave, series, cluster_id, rural, lat, lon) %>% 
+  summarise(mean_asset_index_yeh_no_eth = mean(asset_index_yeh)) %>% 
+  ungroup() %>% 
+  mutate(unique_id = paste(cluster_id, start_year, sep = '_')) %>%
+  select(unique_id, mean_asset_index_yeh_no_eth)
+
+  
 #*******************************************************************************
 #### Check correlation of Asset indices and consumption data ####
 #*******************************************************************************
@@ -248,20 +282,4 @@ tab
 
 write.csv(dat, "../../Data/lsms/processed/labels_hh.csv", row.names = F)
 write.csv(cl_dat,"../../Data/lsms/processed/labels_cluster.csv",row.names = F)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+write.csv(no_eth_cl_dat, '../../Data/lsms/processed/asset_index_no_eth.csv', row.names = F)
