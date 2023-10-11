@@ -106,11 +106,13 @@ lsms_df = pd.merge(lsms_df, eth_idx, on='unique_id', how='left')
 # normalise the asset indices
 lsms_df['mean_asset_index_yeh'] = (lsms_df['mean_asset_index_yeh'] - lsms_df['mean_asset_index_yeh'].mean()) / lsms_df['mean_asset_index_yeh'].std()
 lsms_df['mean_asset_index_yeh_no_eth'] = (lsms_df['mean_asset_index_yeh_no_eth'] - lsms_df['mean_asset_index_yeh_no_eth'].mean()) / lsms_df['mean_asset_index_yeh_no_eth'].std()
+lsms_df['mean_asset_index_nate'] = (lsms_df['mean_asset_index_nate'] - lsms_df['mean_asset_index_nate'].mean()) / lsms_df['mean_asset_index_nate'].std()
 
 # add between variables to the lsms data
 lsms_df['avg_log_mean_pc_cons_usd_2017'] = lsms_df.groupby('cluster_id')['log_mean_pc_cons_usd_2017'].transform('mean')
 lsms_df['avg_mean_asset_index_yeh'] = lsms_df.groupby('cluster_id')['mean_asset_index_yeh'].transform('mean')
 lsms_df['avg_mean_asset_index_yeh_no_eth'] = lsms_df.groupby('cluster_id')['mean_asset_index_yeh_no_eth'].transform('mean')
+lsms_df['avg_mean_asset_index_nate'] = lsms_df.groupby('cluster_id')['mean_asset_index_nate'].transform('mean')
 
 if remove_eth:
     lsms_df = lsms_df[lsms_df.country != 'eth'].reset_index(drop=True)
@@ -122,7 +124,8 @@ feat_df = pd.read_csv(feat_data_pth)
 lsms_vars = ['unique_id', 'n_households',
              'log_mean_pc_cons_usd_2017', 'avg_log_mean_pc_cons_usd_2017',
              'mean_asset_index_yeh', 'avg_mean_asset_index_yeh',
-             'mean_asset_index_yeh_no_eth', 'avg_mean_asset_index_yeh_no_eth']
+             'mean_asset_index_yeh_no_eth', 'avg_mean_asset_index_yeh_no_eth',
+             'mean_asset_index_nate', 'avg_mean_asset_index_nate']
 
 df = pd.merge(lsms_df[lsms_vars], feat_df, on = 'unique_id', how = 'left')
 

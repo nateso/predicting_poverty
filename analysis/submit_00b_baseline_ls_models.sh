@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=00b_baseline_LS               # Job name
-#SBATCH -t 02:00:00                   # estimated time
+#SBATCH -t 10:00:00                   # estimated time
 #SBATCH -p medium                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -c 8
 #SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
@@ -31,22 +31,21 @@ echo "Training Output"
 echo "============================================================================================"
 echo " "
 
-#echo " "
-#echo " "
-#echo "............................................................................................"
-#echo "Training Consumption Expenditure Model baseline"
-#echo "............................................................................................"
-#echo " "
+echo " "
+echo " "
+echo "............................................................................................"
+echo "Training Consumption Expenditure Model baseline"
+echo "............................................................................................"
+echo " "
 
-#between_target_var='avg_log_mean_pc_cons_usd_2017'
-#within_target_var='log_mean_pc_cons_usd_2017'
-#use_ls_vars='True'
-#remove_eth='False'
-#file_pth='results/baseline_ls/rep_cv_res_cons.pkl'
-#
-#python -u 01_train_base.py "$between_target_var" "$within_target_var" "$use_ls_vars" "$remove_eth" "$file_pth"
+between_target_var='avg_log_mean_pc_cons_usd_2017'
+within_target_var='log_mean_pc_cons_usd_2017'
+use_ls_vars='True'
+remove_eth='False'
+file_pth='results/baseline_ls/rep_cv_res_cons.pkl'
 
-echo "Not trained"
+python -u 01_train_base.py "$between_target_var" "$within_target_var" "$use_ls_vars" "$remove_eth" "$file_pth"
+
 
 echo " "
 echo " "
@@ -54,13 +53,13 @@ echo "..........................................................................
 echo "Training Consumption Expenditure Model baseline - No Ethiopia"
 echo "............................................................................................"
 echo " "
-#
-#remove_eth='True'
-#file_pth='results/baseline_ls/rep_cv_res_cons_no_eth.pkl'
-#
-#python -u 01_train_base.py "$between_target_var" "$within_target_var" "$use_ls_vars" "$remove_eth" "$file_pth"
-#
-echo "Not trained"
+
+remove_eth='True'
+file_pth='results/baseline_ls/rep_cv_res_cons_no_eth.pkl'
+
+python -u 01_train_base.py "$between_target_var" "$within_target_var" "$use_ls_vars" "$remove_eth" "$file_pth"
+
+
 
 echo " "
 echo " "
@@ -76,20 +75,20 @@ file_pth='results/baseline_ls/rep_cv_res_asset.pkl'
 
 python -u 01_train_base.py "$between_target_var" "$within_target_var" "$use_ls_vars" "$remove_eth" "$file_pth"
 
-#echo " "
-#echo " "
-#echo "............................................................................................"
-#echo "Training Asset Index Model baseline - no ETHIOPIA"
-#echo "............................................................................................"
-#echo " "
-#between_target_var='avg_mean_asset_index_yeh_no_eth'
-#within_target_var='mean_asset_index_yeh_no_eth'
-#use_ls_vars='True'
-#remove_eth='True'
-#file_pth='results/baseline_ls/rep_cv_res_asset_no_eth.pkl'
-#
-#python -u 01_train_base.py "$between_target_var" "$within_target_var" "$use_ls_vars" "$remove_eth" "$file_pth"
-#
+echo " "
+echo " "
+echo "............................................................................................"
+echo "Training Asset Index Model baseline - no ETHIOPIA"
+echo "............................................................................................"
+echo " "
+between_target_var='avg_mean_asset_index_yeh_no_eth'
+within_target_var='mean_asset_index_yeh_no_eth'
+use_ls_vars='True'
+remove_eth='True'
+file_pth='results/baseline_ls/rep_cv_res_asset_no_eth.pkl'
+
+python -u 01_train_base.py "$between_target_var" "$within_target_var" "$use_ls_vars" "$remove_eth" "$file_pth"
+
 
 # add some description at the end to show that training is completed
 echo " "
