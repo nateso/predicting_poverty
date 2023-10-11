@@ -35,7 +35,7 @@ ls_rgb_median_feats_pth = f"{sat_img_dir}/LS/median_rgb_feats.csv"
 ls_rgb_dyn_feats_pth = f"{sat_img_dir}/LS/dyn_rgb_feats.csv"
 
 # set the band name dictionaries
-mean_name_dict = dict(zip(list(range(4)),['nl','ndvi','ndwi_gao','ndwi_mcf']))
+mean_name_dict = dict(zip(list(range(3)),['nl','ndvi','ndwi_gao']))
 
 #************************************************************
 # Load the data
