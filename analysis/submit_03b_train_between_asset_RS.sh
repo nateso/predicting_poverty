@@ -43,7 +43,7 @@ id_var='cluster_id'
 img_folder='RS_v2_between'
 stats_file='RS_v2_between_img_stats.pkl'
 
-resnet_params='{"input_channels": 6, "use_pretrained_weights":false, "scaled_weight_init":false}'
+resnet_params='{"input_channels": 5, "use_pretrained_weights":false, "scaled_weight_init":false}'
 
 python -u dl_01_between_train.py "$model_name" "$cv_object_name" "$target_var" "$data_type" "$id_var" "$img_folder" "$stats_file" "$resnet_params"
 
