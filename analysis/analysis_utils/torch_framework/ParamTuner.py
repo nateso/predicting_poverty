@@ -67,6 +67,7 @@ class ParamTuner():
 
         # get the index of the best hyper-parameters
         best_index = np.argmax(self.results['max_r2'])
+
         # get the best hyper-parameters
         self.best_params = self.results['hyper_params'][best_index]
 
@@ -108,4 +109,5 @@ class ParamTuner():
 
         trainer.run_training(params['n_epochs'])
 
-        return trainer.return_best_results()
+        # return the best results
+        return trainer.return_best_results(smooth_epoch = 5)

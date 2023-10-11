@@ -178,14 +178,39 @@ class Trainer():
         else:
             print("Model not yet trained")
 
-    def return_best_results(self):
+    def return_best_results(self, smooth_epochs = 1):
         if self.val_loader is not None:
-            min_loss = np.min(self.res_mse['val'])
-            min_loss_epoch = np.argmin(self.res_mse['val']) + 1
-            max_r2 = np.max(self.res_r2['val'])
-            max_r2_epoch = np.argmax(self.res_r2['val']) + 1
-            print(f"\t\tLowest loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
-            print(f"\t\tMaximum R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
+            if smooth_epochs < 2:
+                min_loss = np.min(self.res_mse['val'])
+                min_loss_epoch = np.argmin(self.res_mse['val']) + 1
+                max_r2 = np.max(self.res_r2['val'])
+                max_r2_epoch = np.argmax(self.res_r2['val']) + 1
+
+                print(f"\t\tSmoothing factor {smooth_epochs} - No smoothing")
+                print(f"\t\tLowest loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
+                print(f"\t\tMaximum R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
+            else:
+                # smooth the results
+                moving_avg_filter = np.ones(smooth_epochs)/smooth_epochs
+
+                # create a new array with the smoothed results
+                loss = np.convolve(self.res_mse['val'], moving_avg_filter, mode='valid')
+                r2 = np.convolve(self.res_r2['val'], moving_avg_filter, mode='valid')
+
+                # get the highest smoothed R2 and min MSE
+                max_r2 = np.max(r2)
+                min_loss = np.min(loss)
+
+                # get the epoch for each of these
+                # the epoch is always the median epoch of the smoothing window
+                epoch_adjustment = int(np.ceil(np.median(range(1, smooth_epochs+1))))
+                max_r2_epoch = np.argmax(r2) + epoch_adjustment
+                min_loss_epoch = np.argmin(loss) + epoch_adjustment
+
+                print(f"\t\tSmoothing factor {smooth_epochs}")
+                print(f"\t\tLowest smoothed loss on validation set in epoch {min_loss_epoch}: {min_loss:.6f}")
+                print(f"\t\tMaximum smoothed R2 on validation set in epoch {max_r2_epoch}: {max_r2:.6f}")
+
             return min_loss, min_loss_epoch, max_r2, max_r2_epoch
 
     def get_best_model(self):
