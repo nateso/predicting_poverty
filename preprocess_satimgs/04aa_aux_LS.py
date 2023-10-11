@@ -1,7 +1,7 @@
 
 import pickle
 
-
+# only Relevant for LS images
 # extract statistics for subimages that have already been computed for different types of images
 sat_img_dir = "../../Data/satellite_imgs"
 data_type = "LS"
