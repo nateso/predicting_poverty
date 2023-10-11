@@ -83,8 +83,8 @@ for cid, uids in tqdm(cid_uid_dict.items()):
         # set aside the ESA LC img (this is static)
         esa_lc_img = img[:,:,[-1]]
 
-        # remove wsf image, modis LC, ESA LC image (index 2 and 5, 6)
-        proc_img = np.delete(img, [2,5,6], axis = 2)
+        # remove wsf image, ndwi mcf, modis LC, ESA LC image (index 2 and 4, 5, 6)
+        proc_img = np.delete(img, [2,4,5,6], axis = 2)
 
         # rescale the nightlights image to 0 1 range.
         proc_img[:, :, 0] = np.clip(proc_img[:, :, 0], 0, 100)
