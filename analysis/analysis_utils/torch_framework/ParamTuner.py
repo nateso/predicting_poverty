@@ -110,4 +110,4 @@ class ParamTuner():
         trainer.run_training(params['n_epochs'])
 
         # return the best results
-        return trainer.return_best_results(smooth_epoch = 5)
+        return trainer.return_best_results(smooth_epochs = 5)
