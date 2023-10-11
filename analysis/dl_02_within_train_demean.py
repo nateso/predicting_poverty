@@ -81,8 +81,8 @@ hyper_params = {
     'alpha': [1e-2, 1e-3],
     'step_size': [2],
     'gamma': [0.96],
-    'n_epochs': [200],
-    'patience': [40]
+    'n_epochs': [150],
+    'patience': [None]
 }
 
 # training device

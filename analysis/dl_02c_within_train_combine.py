@@ -60,7 +60,7 @@ max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
-    'min_samples_leaf':1,
+    'min_samples_leaf':15,
     'n_components':25
 }
 
