@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=00b_baseline_LS               # Job name
+#SBATCH --job-name=00d_asset_nate              # Job name
 #SBATCH -t 04:00:00                   # estimated time
 #SBATCH -p medium                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -c 8
 #SBATCH -C scratch                    # ensure that I work on a node that has access to scratch
 #SBATCH --mail-type=all               # send mail when job begins and ends
 #SBATCH --mail-user=nschmid5@uni-goettingen.de # email address
-#SBATCH --output=./results/slurm_files/slurm_00b_baseline_LS.out     # where to write output, %x give job name, %j names job id
-#SBATCH --error=./results/slurm_files/slurm_00b_baseline_LS.err      # where to write slurm error
+#SBATCH --output=./results/slurm_files/slurm_00d_asset_nate.out     # where to write output, %x give job name, %j names job id
+#SBATCH --error=./results/slurm_files/slurm_00d_asset_nate.err      # where to write slurm error
 
 module load anaconda3
 source activate dl_env
