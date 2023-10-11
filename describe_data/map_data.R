@@ -367,7 +367,7 @@ preds_df <- read.csv("analysis/results/baseline/exemplary_predictions.csv") %>%
 # map the predictions
 preds_map_09 <- ggplot(data = uga_shp_2) +
   geom_sf(fill = 'grey', alpha = 0.3)+
-  geom_point(data = preds_df %>% filter(start_year == 2009), aes(x = lon, y = lat, col = y_hat), size = 2) +
+  geom_point(data = preds_df %>% filter(start_year == 2009), aes(x = lon, y = lat, col = y_hat), size = 3) +
   theme_void() +
   scale_color_viridis(option = 'plasma', 
                       name = 'log pc $/day',
@@ -375,7 +375,7 @@ preds_map_09 <- ggplot(data = uga_shp_2) +
 
 preds_map_10 <- ggplot(data = uga_shp_2) +
   geom_sf(fill = 'grey', alpha = 0.3)+
-  geom_point(data = preds_df %>% filter(start_year == 2010), aes(x = lon, y = lat, col = y_hat), size = 2) +
+  geom_point(data = preds_df %>% filter(start_year == 2010), aes(x = lon, y = lat, col = y_hat), size = 3) +
   theme_void() +
   scale_color_viridis(option = 'plasma', 
                       name = 'log pc $/day',
@@ -384,7 +384,7 @@ preds_map_10 <- ggplot(data = uga_shp_2) +
 
 preds_map_11 <- ggplot(data = uga_shp_2) +
   geom_sf(fill = 'grey', alpha = 0.3) +
-  geom_point(data = preds_df %>% filter(start_year == 2011), aes(x = lon, y = lat, col = y_hat), size = 2) +
+  geom_point(data = preds_df %>% filter(start_year == 2011), aes(x = lon, y = lat, col = y_hat), size = 3) +
   theme_void() +
   scale_color_viridis(option = 'plasma', 
                       name = '',  # Set legend title to empty string
