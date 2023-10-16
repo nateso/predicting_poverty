@@ -35,7 +35,7 @@ echo " "
 # set the variable names for the script
 object_name='within_asset'
 target_var='mean_asset_index_yeh'
-ls_cv_pth='results/model_objects/within_asset_LS_cv.pkl'
+ls_cv_pth='results/model_objects/within_asset_MS_cv.pkl'
 rs_cv_pth='results/model_objects/within_asset_RS_cv.pkl'
 
 python -u dl_02c_within_train_combine.py "$object_name" "$target_var" "$ls_cv_pth" "$rs_cv_pth"

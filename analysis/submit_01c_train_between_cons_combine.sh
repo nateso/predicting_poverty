@@ -35,7 +35,7 @@ echo " "
 # set the variable names for the script
 object_name='between_cons'
 target_var='avg_log_mean_pc_cons_usd_2017'
-ls_cv_pth='results/model_objects/between_cons_LS_cv.pkl'
+ls_cv_pth='results/model_objects/between_cons_MS_cv.pkl'
 rs_cv_pth='results/model_objects/between_cons_RS_cv.pkl'
 
 python -u dl_01c_between_train_combine.py "$object_name" "$target_var" "$ls_cv_pth" "$rs_cv_pth"

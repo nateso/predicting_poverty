@@ -35,7 +35,7 @@ echo " "
 # set the variable names for the script
 object_name='within_cons'
 target_var='log_mean_pc_cons_usd_2017'
-ls_cv_pth='results/model_objects/within_cons_LS_cv.pkl'
+ls_cv_pth='results/model_objects/within_cons_MS_cv.pkl'
 rs_cv_pth='results/model_objects/within_cons_RS_cv.pkl'
 
 python -u dl_02c_within_train_combine.py "$object_name" "$target_var" "$ls_cv_pth" "$rs_cv_pth"
