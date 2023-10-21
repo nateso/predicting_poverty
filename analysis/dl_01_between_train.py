@@ -72,7 +72,7 @@ max_obs = 1000000
 
 # set hyper-parameters
 hyper_params = {
-    'lr': [1e-2, 1e-3, 1e-4],
+    'lr': [1e-3, 1e-4],
     'batch_size': [64],
     'alpha': [1e-2, 1e-3],
     'step_size': [1],
