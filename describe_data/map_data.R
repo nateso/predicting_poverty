@@ -197,11 +197,11 @@ cluster_map <- ggplot() +
         legend.spacing.x = unit(.2,'cm'),
         legend.spacing.y = unit(.4,'cm'),
         legend.background = element_blank(),
-        legend.box.spacing = unit(-5, "cm"),
+        legend.box.spacing = unit(-6, "cm"),
         legend.margin = margin(.2, 0, 0, .2, "cm"), # top, right, bottom, left
         plot.margin = margin(0,0,0,0,'cm'),
         plot.background = element_blank()) +
-  guides(color = guide_colorbar(title = 'Daily Consumption\n(2017 int $)',
+  guides(color = guide_colorbar(title = 'Consumption\nexpenditure\n($/pc/day)',
                              title.position="top", 
                              title.hjust = 0.5,
                              label.position = "left",
@@ -450,7 +450,7 @@ map <- map %>%
   addLegend(
     position = "topright",
     colors = c("black", "red", "blue"),
-    labels = c("Original Location", "Recentered Location", "Cluster Grid Cell"),
+    labels = c("Original location", "Recentered location", "Cluster grid cell"),
     opacity = .8,
     labFormat = 'factor'
   )
