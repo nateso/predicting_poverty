@@ -178,7 +178,7 @@ for j in range(10):
                                           within_x_vars,
                                           id_var=within_id_var,
                                           random_seed=rep_seed)
-    within_cv_trainer.run_cv_training(min_samples_leaf=15)
+    within_cv_trainer.run_cv_training(min_samples_leaf=1)
 
     # combine both models
     combined_model = CombinedModel(lsms_df, between_cv_trainer, within_cv_trainer)
